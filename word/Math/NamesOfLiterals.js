@@ -5328,18 +5328,50 @@
 		for (let nCounter = 0; nCounter < this.arr.length; nCounter++)
 		{
 			let oCurrentElement = this.arr[nCounter];
+			let strChunk;
 			if (oCurrentElement instanceof MathText)
 			{
-				strOutput += oCurrentElement.GetText();
+				strChunk = oCurrentElement.GetText();
 			}
 			else if (oCurrentElement instanceof MathTextAndStyles)
 			{
-				strOutput += oCurrentElement.GetText();
+				strChunk = oCurrentElement.GetText();
 			}
 			else
 			{
-				strOutput += oCurrentElement;
+				strChunk = oCurrentElement;
 			}
+
+			// In LaTeX mode, insert a space when a \command (backslash + letters)
+			// is immediately followed by a letter, to prevent concatenation like
+			// \partialx instead of \partial x, or \sumN instead of \sum N.
+			if (this.LaTeX && strOutput.length > 0 && strChunk && strChunk.length > 0)
+			{
+				let chNext = strChunk.charCodeAt(0);
+				let isNextLetter = (chNext >= 65 && chNext <= 90) || (chNext >= 97 && chNext <= 122);
+				if (isNextLetter)
+				{
+					// Check if strOutput ends with \command (backslash followed by letters)
+					let nLen = strOutput.length;
+					let nEnd = nLen - 1;
+					// Walk backwards over letters
+					while (nEnd >= 0)
+					{
+						let ch = strOutput.charCodeAt(nEnd);
+						if ((ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122))
+							nEnd--;
+						else
+							break;
+					}
+					// If we stopped at a backslash and there was at least one letter after it
+					if (nEnd >= 0 && nEnd < nLen - 1 && strOutput.charCodeAt(nEnd) === 92)
+					{
+						strOutput += " ";
+					}
+				}
+			}
+
+			strOutput += strChunk;
 		}
 
 		return strOutput;
