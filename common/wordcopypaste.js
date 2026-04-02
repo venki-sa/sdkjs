@@ -711,21 +711,38 @@ CopyProcessor.prototype =
     {
         var oDocument = this.oDocument;
 		var Para = null;
+		var styleId = null;
+		var styleName = null;
+		var outlineLevel = undefined;
 		//Для heading пишем в h1
-        var styleId = Item.Style_Get();
+        styleId = Item.Style_Get();
         if(styleId)
         {
-            var styleName = oDocument.Styles.Get_Name( styleId ).toLowerCase();
+            styleName = oDocument.Styles.Get_Name(styleId);
+            var styleNameLower = styleName.toLowerCase();
 			//шаблон "heading n" (n=1:6)
-            if(0 === styleName.indexOf("heading"))
+            if(0 === styleNameLower.indexOf("heading"))
             {
-                var nLevel = parseInt(styleName.substring("heading".length));
+                var nLevel = parseInt(styleNameLower.substring("heading".length));
                 if(1 <= nLevel && nLevel <= 6)
                     Para = new CopyElement("h" + nLevel);
             }
         }
         if(null == Para)
             Para = new CopyElement("p");
+
+		if (Item.GetOutlineLvl)
+			outlineLevel = Item.GetOutlineLvl();
+
+		if (styleId)
+			Para.oAttributes["data-oo-style-id"] = CopyPasteCorrectString("" + styleId);
+		if (styleName)
+			Para.oAttributes["data-oo-style-name"] = CopyPasteCorrectString(styleName);
+		if (undefined !== outlineLevel)
+		{
+			Para.oAttributes["data-oo-outline-level"] = "" + outlineLevel;
+			Para.oAttributes["data-oo-is-heading"] = "true";
+		}
 
         var oNumPr;
         var bIsNullNumPr = false;
@@ -828,10 +845,18 @@ CopyProcessor.prototype =
         //pPr
         this.Commit_pPr(Item, Para, nextElem);
 
+		if (!bIsNullNumPr && oNumPr)
+		{
+			if (null != oNumPr.NumId)
+				Para.oAttributes["data-oo-num-id"] = "" + oNumPr.NumId;
+			if (null != oNumPr.Lvl)
+				Para.oAttributes["data-oo-num-level"] = "" + oNumPr.Lvl;
+		}
+
         if(false === selectedAll)
         {
 			//если последний элемент в выделении неполностью выделенный параграф, то он копируется как обычный текст без настроек параграфа и списков
-			this.CopyRunContent(Item, oDomTarget, false);
+            this.CopyRunContent(Item, oDomTarget, false);
         }
         else
         {
