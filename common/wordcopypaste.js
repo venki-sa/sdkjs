@@ -659,7 +659,7 @@ CopyProcessor.prototype =
 				}
 			} else if (para_Math === item.Type) {
 				var latexText = item.GetText(true);
-				if (latexText) {
+				if (latexText && latexText.trim()) {
 					var oSpan = new CopyElement("span");
 					oSpan.oAttributes["class"] = "math-tex";
 					oSpan.oAttributes["data-latex"] = CopyPasteCorrectString(latexText);
