@@ -19,3 +19,4 @@ package-lock.json
 connector
 tests/package*
 .claude/
+.cache/latex-export-data/

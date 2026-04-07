@@ -1310,6 +1310,11 @@ ParaMath.prototype.GetText = function(isLaTeX)
     return oMathText.GetText();
 };
 
+ParaMath.prototype.GetLaTeXText = function(options)
+{
+	return AscMath.ExportToLaTeX(this, options);
+};
+
 ParaMath.prototype.GetTextOfElement = function (isLaTeX, isDefaultText)
 {
     return this.Root.GetTextOfElement(isLaTeX, isDefaultText);

@@ -1,0 +1,122 @@
+$(function () {
+	let logicDocument, p1, mathContent;
+
+	function Init()
+	{
+		logicDocument = AscTest.CreateLogicDocument();
+		logicDocument.Start_SilentMode();
+		logicDocument.RemoveFromContent(0, logicDocument.GetElementsCount(), false);
+
+		p1 = new AscWord.Paragraph();
+		logicDocument.AddToContent(0, p1);
+
+		mathContent = new ParaMath();
+
+		if (p1.Content.length > 0)
+			p1.Content.splice(0, 1);
+
+		p1.AddToContent(0, mathContent);
+	}
+
+	function ClearMath()
+	{
+		mathContent.Root.Remove_FromContent(0, mathContent.Root.Content.length);
+		mathContent.Root.Correct_Content();
+	}
+
+	function AddText(str)
+	{
+		let iterator = str.getUnicodeIterator();
+
+		while (iterator.isInside())
+		{
+			mathContent.Add(new AscWord.CRunText(iterator.value()));
+			iterator.next();
+		}
+	}
+
+	function ResetStrictExportState()
+	{
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Legacy);
+		AscMath.SetLaTeXExportFallbackPolicy(AscMath.c_oAscLaTeXExportFallbackPolicy.Legacy);
+		AscMath.ResetLaTeXExportRegistry();
+	}
+
+	Init();
+
+	QUnit.module("LaTeX export flags", {
+		beforeEach: function () {
+			ResetStrictExportState();
+		},
+		afterEach: function () {
+			ResetStrictExportState();
+		}
+	});
+
+	QUnit.test("default export mode is legacy", function (assert) {
+		assert.strictEqual(AscMath.GetLaTeXExportMode(), AscMath.c_oAscLaTeXExportMode.Legacy);
+	});
+
+	QUnit.test("strict export renderer inserts boundary spaces by token kind", function (assert) {
+		const K = AscMath.LaTeXExportTokenKinds;
+		const token = AscMath.CreateLaTeXExportToken;
+
+		let output = AscMath.RenderLaTeXExportTokens([
+			token(K.Command, "\\alpha"),
+			token(K.Identifier, "x")
+		], AscMath.CreateLaTeXExportContext());
+		assert.strictEqual(output, "\\alpha x", "space inserted between command and identifier");
+
+		output = AscMath.RenderLaTeXExportTokens([
+			token(K.Command, "\\sqrt"),
+			token(K.GroupOpen, "{"),
+			token(K.Identifier, "x"),
+			token(K.GroupClose, "}")
+		], AscMath.CreateLaTeXExportContext());
+		assert.strictEqual(output, "\\sqrt{x}", "no extra space before group open");
+	});
+
+	QUnit.test("strict export falls back to legacy output until a node exporter exists", function (assert) {
+		ClearMath();
+		logicDocument.SetMathInputType(1);
+		AddText("\\theta");
+		mathContent.ConvertView(false, Asc.c_oAscMathInputType.LaTeX);
+
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+
+		assert.strictEqual(mathContent.GetLaTeXText(), mathContent.GetText(true), "strict path falls back to legacy output");
+	});
+
+	QUnit.test("strict export entry point uses registered node exporter", function (assert) {
+		const K = AscMath.LaTeXExportTokenKinds;
+		const token = AscMath.CreateLaTeXExportToken;
+
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+		AscMath.RegisterLaTeXExportNode("ParaMath", function () {
+			return [
+				token(K.Command, "\\alpha"),
+				token(K.Identifier, "x")
+			];
+		});
+
+		assert.strictEqual(mathContent.GetLaTeXText(), "\\alpha x");
+	});
+
+	QUnit.test("strict symbol overrides remove OMML-only aliases", function (assert) {
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("℃", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"{}^{\\circ}\\mathrm{C}"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("⁡", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			""
+		);
+	});
+});
