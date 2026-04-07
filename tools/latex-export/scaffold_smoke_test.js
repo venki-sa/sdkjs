@@ -421,6 +421,36 @@ assert.deepStrictEqual(matrixAlignValidation.approximatedProperties, [
 	"CMathMatrix.baseJc",
 ]);
 
+const matrixSpacingValidation = global.AscMath.CreateLaTeXExportValidation();
+const matrixSpacingOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CMathMatrix"},
+	Pr: {
+		begChr: "(".charCodeAt(0),
+		endChr: ")".charCodeAt(0),
+		cGp: 10,
+		rSp: 20,
+		Get_ColumnMcJc() {
+			return global.MCJC_CENTER;
+		}
+	},
+	getRowsCount() { return 2; },
+	getColsCount() { return 2; },
+	getContentElement(row, col) {
+		const cells = [
+			[matrixCellA, matrixCellB],
+			[matrixCellC, matrixCellD],
+		];
+		return cells[row][col];
+	},
+	GetText() { return "legacy-matrix-spacing"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	matrixSpacingHeuristics: true,
+	validation: matrixSpacingValidation,
+});
+assert.strictEqual(matrixSpacingOutput, "\\left(\\begin{array}{c@{\\hspace{1pt}}c}a&b\\\\[2pt]c&d\\end{array}\\right)");
+assert.deepStrictEqual(matrixSpacingValidation.implementedProperties, ["CMathMatrix.spacingHeuristics"]);
+
 const eqArrayRow1 = {
 	constructor: {name: "FakeEqRow"},
 	GetText() { return "legacy-eq-row-1"; }
@@ -463,6 +493,20 @@ const groupCharacterOutput = global.AscMath.ExportToLaTeX({
 	GetText() { return "legacy-group-character"; }
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(groupCharacterOutput, "\\overbrace{x}");
+
+const groupCharacterPackageValidation = global.AscMath.CreateLaTeXExportValidation();
+const groupCharacterPackageOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CGroupCharacter"},
+	Pr: {chr: "⏜".charCodeAt(0), pos: 1},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-group-overparen"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: groupCharacterPackageValidation,
+});
+assert.strictEqual(groupCharacterPackageOutput, "\\overparen{x}");
+assert.deepStrictEqual(groupCharacterPackageValidation.requiredPackages, ["mathtools"]);
+assert.deepStrictEqual(groupCharacterPackageValidation.approximatedProperties, ["CGroupCharacter.packageCommand"]);
 
 const fakeLeaf = function (char) {
 	return {
@@ -575,18 +619,43 @@ const directFormattingOutput = global.AscMath.ExportToLaTeX({
 	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
 	validation: directFormattingValidation,
 });
-assert.strictEqual(directFormattingOutput, "x");
+assert.strictEqual(directFormattingOutput, "\\mathbf{x}");
 assert.deepStrictEqual(directFormattingValidation.approximatedProperties, [
+	"ParaRun.TextPr.RStyle",
 	"ParaRun.TextPr.Bold",
 	"ParaRun.TextPr.Italic",
 ]);
 assert.deepStrictEqual(directFormattingValidation.droppedProperties, [
-	"ParaRun.TextPr.RStyle",
 	"ParaRun.TextPr.Color",
 	"ParaRun.TextPr.Highlight",
 	"ParaRun.TextPr.VertAlign",
 	"ParaRun.TextPr.RFonts",
 ]);
+
+const packageFormattingValidation = global.AscMath.CreateLaTeXExportValidation();
+const packageFormattingOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "ParaRun"},
+	Content: [fakeLeaf("x")],
+	Pr: {
+		Color: {r: 1, g: 2, b: 3},
+		HighLight: {r: 4, g: 5, b: 6},
+	},
+	GetText() { return "legacy-package-formatting"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	packageFeatures: {
+		color: true,
+		highlight: true,
+	},
+	validation: packageFormattingValidation,
+});
+assert.strictEqual(packageFormattingOutput, "\\colorbox[RGB]{4,5,6}{\\textcolor[RGB]{1,2,3}{x}}");
+assert.deepStrictEqual(packageFormattingValidation.requiredPackages, ["xcolor"]);
+assert.deepStrictEqual(packageFormattingValidation.implementedProperties, [
+	"ParaRun.TextPr.Color",
+	"ParaRun.TextPr.Highlight",
+]);
+assert.deepStrictEqual(packageFormattingValidation.droppedProperties, []);
 
 const sansRFontsValidation = global.AscMath.CreateLaTeXExportValidation();
 const sansRFontsOutput = global.AscMath.ExportToLaTeX({

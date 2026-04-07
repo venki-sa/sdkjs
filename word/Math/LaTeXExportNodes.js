@@ -45,6 +45,19 @@
 		collection.push(value);
 	}
 
+	function HasPackageFeature(context, featureName)
+	{
+		return !!(context
+			&& context.packageFeatures
+			&& context.packageFeatures[featureName]);
+	}
+
+	function RequirePackage(context, packageName)
+	{
+		if (context && context.validation)
+			PushValidationEntry(context.validation.requiredPackages, packageName);
+	}
+
 	const NeutralMathFontNames = {
 		"cambria math": true,
 	};
@@ -150,6 +163,157 @@
 			PushValidationEntry(context.validation.approximatedProperties, "ParaRun.TextPr.RFonts");
 
 		return wrappers;
+	}
+
+	function GetRunRStyleWrappers(node, context)
+	{
+		let pr = node && typeof node.Get_CompiledPr === "function"
+			? node.Get_CompiledPr(false)
+			: (node ? node.Pr : null);
+		let styleName = pr && pr.RStyle ? String(pr.RStyle).trim().toLowerCase() : "";
+
+		if (!styleName)
+			return [];
+
+		if (/(strong|bold|intense|emphasisbold)/.test(styleName))
+		{
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "ParaRun.TextPr.RStyle");
+			return ["\\mathbf"];
+		}
+
+		if (/(emphasis|italic|quote)/.test(styleName))
+		{
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "ParaRun.TextPr.RStyle");
+			return ["\\mathit"];
+		}
+
+		if (/(code|mono|console|tt)/.test(styleName))
+		{
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "ParaRun.TextPr.RStyle");
+			return ["\\mathtt"];
+		}
+
+		return [];
+	}
+
+	function NormalizeColorByte(value)
+	{
+		let numeric = Number(value);
+		if (!isFinite(numeric))
+			return null;
+
+		numeric = Math.max(0, Math.min(255, Math.round(numeric)));
+		return numeric;
+	}
+
+	function ResolveRGBColor(colorValue)
+	{
+		let r;
+		let g;
+		let b;
+		let match;
+
+		if (!colorValue)
+			return null;
+
+		if (typeof colorValue === "string")
+		{
+			match = colorValue.match(/^#?([0-9a-f]{6})$/i);
+			if (match)
+			{
+				return {
+					r: parseInt(match[1].slice(0, 2), 16),
+					g: parseInt(match[1].slice(2, 4), 16),
+					b: parseInt(match[1].slice(4, 6), 16),
+				};
+			}
+			return null;
+		}
+
+		r = NormalizeColorByte(colorValue.r !== undefined ? colorValue.r : colorValue.R);
+		g = NormalizeColorByte(colorValue.g !== undefined ? colorValue.g : colorValue.G);
+		b = NormalizeColorByte(colorValue.b !== undefined ? colorValue.b : colorValue.B);
+
+		if (r === null || g === null || b === null)
+			return null;
+
+		return {r: r, g: g, b: b};
+	}
+
+	function GetRunForegroundColor(pr)
+	{
+		return ResolveRGBColor(pr && (pr.Color || pr.Unifill || pr.TextFill || pr.TextOutline));
+	}
+
+	function GetRunHighlightColor(pr)
+	{
+		if (!pr)
+			return null;
+
+		return ResolveRGBColor(pr.HighLight)
+			|| ResolveRGBColor(pr.HighlightColor)
+			|| ResolveRGBColor(pr.Shd && pr.Shd.Color)
+			|| ResolveRGBColor(pr.Shd && pr.Shd.Unifill);
+	}
+
+	function WrapCommandWithRawPrefix(command, rawPrefix, tokens)
+	{
+		let result = [token(K.Command, command)];
+
+		if (rawPrefix)
+			result.push(token(K.Raw, rawPrefix));
+
+		return result.concat(WrapGroup(tokens));
+	}
+
+	function WrapColorTokens(command, rgb, tokens)
+	{
+		if (!rgb)
+			return tokens;
+
+		return WrapCommandWithRawPrefix(command, "[RGB]{" + rgb.r + "," + rgb.g + "," + rgb.b + "}", tokens);
+	}
+
+	function ApplyRunPackageFormatting(node, tokens, context)
+	{
+		let pr = node && typeof node.Get_CompiledPr === "function"
+			? node.Get_CompiledPr(false)
+			: (node ? node.Pr : null);
+		let result = tokens;
+		let foreground;
+		let highlight;
+
+		if (!pr || !context)
+			return result;
+
+		if (HasPackageFeature(context, "color"))
+		{
+			foreground = GetRunForegroundColor(pr);
+			if (foreground)
+			{
+				RequirePackage(context, "xcolor");
+				if (context.validation)
+					PushValidationEntry(context.validation.implementedProperties, "ParaRun.TextPr.Color");
+				result = WrapColorTokens("\\textcolor", foreground, result);
+			}
+		}
+
+		if (HasPackageFeature(context, "highlight"))
+		{
+			highlight = GetRunHighlightColor(pr);
+			if (highlight)
+			{
+				RequirePackage(context, "xcolor");
+				if (context.validation)
+					PushValidationEntry(context.validation.implementedProperties, "ParaRun.TextPr.Highlight");
+				result = WrapColorTokens("\\colorbox", highlight, result);
+			}
+		}
+
+		return result;
 	}
 
 	function ExportLeafString(strValue, context)
@@ -288,13 +452,17 @@
 		if (pr.Italic === true || pr.ItalicCS === true)
 			PushValidationEntry(context.validation.approximatedProperties, "ParaRun.TextPr.Italic");
 
-		if (pr.RStyle)
+		if (pr.RStyle && GetRunRStyleWrappers(node, context).length === 0)
 			PushValidationEntry(context.validation.droppedProperties, "ParaRun.TextPr.RStyle");
 
-		if (pr.Color || pr.Unifill || pr.TextFill || pr.TextOutline)
+		if ((pr.Color || pr.Unifill || pr.TextFill || pr.TextOutline) && !GetRunForegroundColor(pr))
+			PushValidationEntry(context.validation.droppedProperties, "ParaRun.TextPr.Color");
+		else if ((pr.Color || pr.Unifill || pr.TextFill || pr.TextOutline) && !HasPackageFeature(context, "color"))
 			PushValidationEntry(context.validation.droppedProperties, "ParaRun.TextPr.Color");
 
-		if (pr.HighLight || pr.HighlightColor || pr.Shd)
+		if ((pr.HighLight || pr.HighlightColor || pr.Shd) && !GetRunHighlightColor(pr))
+			PushValidationEntry(context.validation.droppedProperties, "ParaRun.TextPr.Highlight");
+		else if ((pr.HighLight || pr.HighlightColor || pr.Shd) && !HasPackageFeature(context, "highlight"))
 			PushValidationEntry(context.validation.droppedProperties, "ParaRun.TextPr.Highlight");
 
 		if (pr.VertAlign !== undefined && pr.VertAlign !== null)
@@ -339,12 +507,14 @@
 
 		wrappers = GetRunStyleWrappers(node, context);
 		if (wrappers.length === 0)
+			wrappers = GetRunRStyleWrappers(node, context);
+		if (wrappers.length === 0)
 			wrappers = GetRunRFontWrappers(node, context);
 		RecordRunTextPropertyFidelity(node, context);
 		if (wrappers.length > 0 && result.length > 0)
-			return ApplyCommandWrappers(wrappers, result);
+			result = ApplyCommandWrappers(wrappers, result);
 
-		return result;
+		return ApplyRunPackageFormatting(node, result, context);
 	}
 
 	function WrapGroup(tokens)
@@ -743,6 +913,9 @@
 		let result = [token(K.Raw, "\\begin{array}{" + columnSpec + "}")];
 		let rowIndex;
 		let columnIndex;
+		let rowSpacing = context && context.matrixSpacingHeuristics && context.matrixRowSpacingLength
+			? context.matrixRowSpacingLength
+			: "";
 
 		for (rowIndex = 0; rowIndex < rows.length; rowIndex += 1)
 		{
@@ -754,7 +927,7 @@
 			}
 
 			if (rowIndex < rows.length - 1)
-				result.push(token(K.Raw, "\\\\"));
+				result.push(token(K.Raw, rowSpacing ? "\\\\[" + rowSpacing + "]" : "\\\\"));
 		}
 
 		result.push(token(K.Raw, "\\end{array}"));
@@ -778,11 +951,17 @@
 		return "matrix";
 	}
 
-	function GetMatrixColumnSpec(node)
+	function GetMatrixColumnSpec(node, context)
 	{
 		let spec = "";
 		let index;
 		let alignment;
+		let gap = "";
+
+		if (context && context.matrixSpacingHeuristics && node.Pr && node.Pr.cGp)
+			gap = GetApproximateMatrixLength(node.Pr.cGp);
+		else if (context && context.matrixSpacingHeuristics && node.Pr && node.Pr.cSp)
+			gap = GetApproximateMatrixLength(node.Pr.cSp);
 
 		for (index = 0; index < node.getColsCount(); index += 1)
 		{
@@ -790,9 +969,26 @@
 				? node.Pr.Get_ColumnMcJc(index)
 				: undefined;
 			spec += GetArrayColumnSpecFromAlignment(alignment);
+			if (gap && index < node.getColsCount() - 1)
+				spec += "@{\\hspace{" + gap + "}}";
 		}
 
 		return spec || "c";
+	}
+
+	function GetApproximateMatrixLength(value)
+	{
+		let numeric = Number(value);
+		let pt;
+
+		if (!isFinite(numeric) || numeric <= 0)
+			return "";
+
+		pt = Math.round(numeric) / 10;
+		if (pt <= 0)
+			return "";
+
+		return String(pt).replace(/\.0$/, "") + "pt";
 	}
 
 	function IsCenteredColumnSpec(columnSpec)
@@ -810,6 +1006,10 @@
 		let environmentName;
 		let leftDelimiter;
 		let rightDelimiter;
+		let useSpacingHeuristics = !!(context
+			&& context.matrixSpacingHeuristics
+			&& node.Pr
+			&& (node.Pr.cGp || node.Pr.cSp || node.Pr.rSp));
 
 		for (rowIndex = 0; rowIndex < node.getRowsCount(); rowIndex += 1)
 		{
@@ -818,10 +1018,13 @@
 				rows[rowIndex][columnIndex] = node.getContentElement(rowIndex, columnIndex);
 		}
 
-		columnSpec = GetMatrixColumnSpec(node);
+		columnSpec = GetMatrixColumnSpec(node, context);
 		environmentName = ResolveMatrixEnvironment(node);
 
-		if (IsCenteredColumnSpec(columnSpec))
+		if (context)
+			context.matrixRowSpacingLength = useSpacingHeuristics ? GetApproximateMatrixLength(node.Pr && node.Pr.rSp) : "";
+
+		if (IsCenteredColumnSpec(columnSpec) && !useSpacingHeuristics)
 			return ExportMatrixEnvironment(environmentName, rows, context);
 
 		leftDelimiter = node.Pr && node.Pr.begChr !== -1 ? String.fromCharCode(node.Pr.begChr || 40) : "";
@@ -841,6 +1044,9 @@
 			if (node.Pr && typeof node.Pr.baseJc !== "undefined" && node.Pr.baseJc !== BASEJC_CENTER)
 				PushValidationEntry(context.validation.approximatedProperties, "CMathMatrix.baseJc");
 		}
+
+		if (useSpacingHeuristics && context && context.validation)
+			PushValidationEntry(context.validation.implementedProperties, "CMathMatrix.spacingHeuristics");
 
 		return [
 			token(K.Command, "\\left"),
@@ -881,8 +1087,41 @@
 	{
 		let codePoint = node.Pr.chr || (node.operator && typeof node.operator.Get_CodeChr === "function" ? node.operator.Get_CodeChr() : 0);
 		let symbol = codePoint ? String.fromCharCode(codePoint) : "";
-		let mapped = symbol && AscMath.SymbolsToLaTeX ? AscMath.SymbolsToLaTeX[symbol] : "";
+		let mapped = "";
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
+		let isAbove = !!(node.Pr && node.Pr.pos === 1);
+
+		switch (codePoint)
+		{
+			case 0x23DE:
+				mapped = "\\overbrace";
+				break;
+			case 0x23DF:
+				mapped = "\\underbrace";
+				break;
+			case 0x23DC:
+				mapped = isAbove ? "\\overparen" : "\\underparen";
+				break;
+			case 0x23DD:
+				mapped = isAbove ? "\\overparen" : "\\underparen";
+				break;
+			case 0x23B4:
+				mapped = "\\overbracket";
+				break;
+			case 0x23B5:
+				mapped = "\\underbracket";
+				break;
+			default:
+				mapped = symbol && AscMath.SymbolsToLaTeX ? AscMath.SymbolsToLaTeX[symbol] : "";
+				break;
+		}
+
+		if ((mapped === "\\overparen" || mapped === "\\underparen" || mapped === "\\overbracket" || mapped === "\\underbracket")
+			&& context && context.validation)
+		{
+			RequirePackage(context, "mathtools");
+			PushValidationEntry(context.validation.approximatedProperties, "CGroupCharacter.packageCommand");
+		}
 
 		if (/^\\[A-Za-z]+$/.test(mapped))
 			return WrapCommandArgument(mapped, base);

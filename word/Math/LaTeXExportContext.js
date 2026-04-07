@@ -44,6 +44,7 @@
 			fallbacks: [],
 			rendererViolations: [],
 			implementedProperties: [],
+			requiredPackages: [],
 			droppedProperties: [],
 			approximatedProperties: [],
 		};
@@ -56,6 +57,8 @@
 		return {
 			mode: settings.mode,
 			fallbackPolicy: settings.fallbackPolicy,
+			packageFeatures: settings.packageFeatures,
+			matrixSpacingHeuristics: settings.matrixSpacingHeuristics,
 			validation: options && options.validation ? options.validation : CreateLaTeXExportValidation(),
 			sourcePath: options && options.sourcePath ? options.sourcePath : "",
 			parentNodeKind: options && options.parentNodeKind ? options.parentNodeKind : "",

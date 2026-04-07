@@ -86,6 +86,8 @@
 		return {
 			mode: options.mode || GetLaTeXExportMode(),
 			fallbackPolicy: options.fallbackPolicy || GetLaTeXExportFallbackPolicy(),
+			packageFeatures: options.packageFeatures || {},
+			matrixSpacingHeuristics: !!options.matrixSpacingHeuristics,
 		};
 	}
 
