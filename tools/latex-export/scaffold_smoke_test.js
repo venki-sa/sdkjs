@@ -552,6 +552,36 @@ const eqArrayAlignOutput = global.AscMath.ExportToLaTeX({
 assert.strictEqual(eqArrayAlignOutput, "\\begin{array}{l}x=1\\end{array}");
 assert.deepStrictEqual(eqArrayAlignValidation.approximatedProperties, ["CEqArray.baseJc"]);
 
+const eqArrayEqnoRow = {
+	constructor: {name: "FakeEqnoRow"},
+	GetText() { return "legacy-eq-row-eqno"; }
+};
+global.AscMath.RegisterLaTeXExportNode("FakeEqnoRow", function () {
+	return [
+		token(K.Raw, "x=1"),
+		token(K.Raw, "\\#"),
+		token(K.Command, "\\left"),
+		token(K.Raw, "("),
+		token(K.Number, "1"),
+		token(K.Raw, "."),
+		token(K.Number, "2"),
+		token(K.Command, "\\right"),
+		token(K.Raw, ")"),
+	];
+});
+const eqArrayEqnoValidation = global.AscMath.CreateLaTeXExportValidation();
+const eqArrayEqnoOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CEqArray"},
+	Pr: {row: 1},
+	getElement() { return eqArrayEqnoRow; },
+	GetText() { return "legacy-eqarray-eqno"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: eqArrayEqnoValidation,
+});
+assert.strictEqual(eqArrayEqnoOutput, "\\begin{array}{c@{\\qquad}r}x=1&\\left(1.2\\right)\\end{array}");
+assert.deepStrictEqual(eqArrayEqnoValidation.implementedProperties, ["CEqArray.eqno"]);
+
 global.AscMath.SymbolsToLaTeX = {
 	"⏞": "\\overbrace",
 };

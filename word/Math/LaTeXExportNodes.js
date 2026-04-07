@@ -1000,6 +1000,80 @@
 		return result;
 	}
 
+	function ExportArrayCell(cell, context)
+	{
+		if (Array.isArray(cell))
+			return cell.slice();
+
+		return AscMath.ExportNodeToLaTeXTokens(cell, context);
+	}
+
+	function TrimEqArrayTokens(tokens, trimStart, trimEnd)
+	{
+		let start = 0;
+		let end = tokens.length;
+
+		if (trimStart)
+		{
+			while (start < end && (tokens[start].kind === K.Space || tokens[start].value === "\\ "))
+				start += 1;
+		}
+
+		if (trimEnd)
+		{
+			while (end > start && (tokens[end - 1].kind === K.Space || tokens[end - 1].value === "\\ "))
+				end -= 1;
+		}
+
+		return tokens.slice(start, end);
+	}
+
+	function IsEqnoRightSideTokens(tokens)
+	{
+		let trimmed = TrimEqArrayTokens(tokens, true, true);
+		let length = trimmed.length;
+
+		if (length < 2)
+			return false;
+
+		if (trimmed[0].kind === K.Command && trimmed[0].value === "\\left")
+		{
+			return length >= 4
+				&& trimmed[1].kind === K.Raw
+				&& trimmed[1].value === "("
+				&& trimmed[length - 2].kind === K.Command
+				&& trimmed[length - 2].value === "\\right"
+				&& trimmed[length - 1].kind === K.Raw
+				&& trimmed[length - 1].value === ")";
+		}
+
+		return trimmed[0].kind === K.Raw
+			&& trimmed[0].value === "("
+			&& trimmed[length - 1].kind === K.Raw
+			&& trimmed[length - 1].value === ")";
+	}
+
+	function SplitEqnoTokens(tokens)
+	{
+		let index;
+		let body;
+		let eqno;
+
+		for (index = tokens.length - 1; index >= 0; index -= 1)
+		{
+			if (tokens[index].kind === K.Raw && tokens[index].value === "\\#")
+			{
+				body = TrimEqArrayTokens(tokens.slice(0, index), true, true);
+				eqno = TrimEqArrayTokens(tokens.slice(index + 1), true, true);
+
+				if (body.length > 0 && eqno.length > 0 && IsEqnoRightSideTokens(eqno))
+					return {body: body, eqno: eqno};
+			}
+		}
+
+		return null;
+	}
+
 	function GetArrayColumnSpecFromAlignment(alignment)
 	{
 		if (typeof MCJC_LEFT !== "undefined" && alignment === MCJC_LEFT)
@@ -1022,7 +1096,7 @@
 		{
 			for (columnIndex = 0; columnIndex < rows[rowIndex].length; columnIndex += 1)
 			{
-				result = result.concat(AscMath.ExportNodeToLaTeXTokens(rows[rowIndex][columnIndex], context));
+				result = result.concat(ExportArrayCell(rows[rowIndex][columnIndex], context));
 				if (columnIndex < rows[rowIndex].length - 1)
 					result.push(token(K.Raw, "&"));
 			}
@@ -1166,9 +1240,25 @@
 		let rows = [];
 		let rowIndex;
 		let columnSpec = "c";
+		let hasEqno = false;
+		let rowTokens;
+		let eqnoSplit;
 
 		for (rowIndex = 0; rowIndex < node.Pr.row; rowIndex += 1)
-			rows.push([node.getElement(rowIndex)]);
+		{
+			rowTokens = AscMath.ExportNodeToLaTeXTokens(node.getElement(rowIndex), context);
+			eqnoSplit = SplitEqnoTokens(rowTokens);
+			if (eqnoSplit)
+			{
+				hasEqno = true;
+				rows.push([eqnoSplit.body, eqnoSplit.eqno]);
+				if (context && context.validation)
+					PushValidationEntry(context.validation.implementedProperties, "CEqArray.eqno");
+				continue;
+			}
+
+			rows.push([rowTokens]);
+		}
 
 		if (node.Pr)
 		{
@@ -1180,6 +1270,16 @@
 
 		if (columnSpec !== "c" && context && context.validation)
 			PushValidationEntry(context.validation.approximatedProperties, "CEqArray.baseJc");
+
+		if (hasEqno)
+		{
+			for (rowIndex = 0; rowIndex < rows.length; rowIndex += 1)
+			{
+				if (rows[rowIndex].length === 1)
+					rows[rowIndex].push([]);
+			}
+			columnSpec += "@{\\qquad}r";
+		}
 
 		return ExportArrayEnvironment(rows, columnSpec, context);
 	}
