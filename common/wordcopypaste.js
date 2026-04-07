@@ -121,6 +121,70 @@ function GetObjectsForImageDownload(aBuilderImages, bSameDoc)
     return {aUrls: aUrls, aBuilderImagesByUrl: aBuilderImagesByUrl};
 }
 
+function JoinCopyPasteAttributeValues(values)
+{
+	if (!values || !values.length)
+		return "";
+
+	return values.join(" ");
+}
+
+function GetStrictLaTeXFidelity(validation)
+{
+	if (!validation)
+		return "unknown";
+
+	if ((validation.fallbacks && validation.fallbacks.length)
+		|| (validation.unknownNodes && validation.unknownNodes.length)
+		|| (validation.unknownSymbols && validation.unknownSymbols.length)
+		|| (validation.forbiddenAliases && validation.forbiddenAliases.length)
+		|| (validation.rendererViolations && validation.rendererViolations.length))
+	{
+		return "fallback";
+	}
+
+	if (validation.droppedProperties && validation.droppedProperties.length)
+		return "dropped";
+
+	if (validation.approximatedProperties && validation.approximatedProperties.length)
+		return "approximated";
+
+	if (validation.requiredPackages && validation.requiredPackages.length)
+		return "configurable";
+
+	return "exact";
+}
+
+function GetMathHtmlExportData(item)
+{
+	let result = {
+		legacyText: "",
+		strictText: "",
+		strictValidation: null,
+	};
+
+	if (!item)
+		return result;
+
+	if (typeof item.GetText === "function")
+		result.legacyText = item.GetText(true) || "";
+
+	if (window["AscMath"]
+		&& typeof item.GetLaTeXText === "function"
+		&& AscMath.CreateLaTeXExportValidation
+		&& AscMath.c_oAscLaTeXExportMode
+		&& AscMath.c_oAscLaTeXExportMode.Strict)
+	{
+		result.strictValidation = AscMath.CreateLaTeXExportValidation();
+		result.strictText = item.GetLaTeXText({
+			mode: AscMath.c_oAscLaTeXExportMode.Strict,
+			validation: result.strictValidation,
+		}) || "";
+	}
+
+	return result;
+}
+
 function ResetNewUrls(data, aUrls, aBuilderImagesByUrl, oImageMap)
 {
     for (var i = 0, length = Math.min(data.length, aBuilderImagesByUrl.length); i < length; ++i)
@@ -658,11 +722,29 @@ CopyProcessor.prototype =
 					this.CopyRunContent(item, oTarget, true);
 				}
 			} else if (para_Math === item.Type) {
-				var latexText = item.GetText(true);
+				var oMathExport = GetMathHtmlExportData(item);
+				var latexText = oMathExport.legacyText || oMathExport.strictText;
 				if (latexText && latexText.trim()) {
 					var oSpan = new CopyElement("span");
 					oSpan.oAttributes["class"] = "math-tex";
+					oSpan.oAttributes["data-math-format"] = "latex";
+					oSpan.oAttributes["data-latex-mode"] = oMathExport.legacyText ? "legacy" : "strict";
 					oSpan.oAttributes["data-latex"] = CopyPasteCorrectString(latexText);
+					if (oMathExport.legacyText) {
+						oSpan.oAttributes["data-latex-legacy"] = CopyPasteCorrectString(oMathExport.legacyText);
+					}
+					if (oMathExport.strictText) {
+						oSpan.oAttributes["data-latex-strict"] = CopyPasteCorrectString(oMathExport.strictText);
+					}
+					if (oMathExport.strictValidation) {
+						oSpan.oAttributes["data-latex-strict-fidelity"] = GetStrictLaTeXFidelity(oMathExport.strictValidation);
+						if (oMathExport.strictValidation.requiredPackages && oMathExport.strictValidation.requiredPackages.length) {
+							oSpan.oAttributes["data-latex-strict-packages"] = CopyPasteCorrectString(JoinCopyPasteAttributeValues(oMathExport.strictValidation.requiredPackages));
+						}
+						if (oMathExport.strictValidation.fallbacks && oMathExport.strictValidation.fallbacks.length) {
+							oSpan.oAttributes["data-latex-strict-has-fallback"] = "true";
+						}
+					}
 					oSpan.addChild(new CopyElement("\\(" + CopyPasteCorrectString(latexText) + "\\)", true));
 					oTarget.addChild(oSpan);
 				}
