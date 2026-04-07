@@ -34,19 +34,47 @@
 
 (function (window) {
 	const AscMath = window["AscMath"] = window["AscMath"] || {};
-	const nodeExporters = {};
+	const nodeExportersByName = {};
+	const nodeExportersByType = {};
+	const nodeExportersByKind = {};
+	const nodeExportersByClassType = {};
 	const symbolRegistry = {};
 	const K = AscMath.LaTeXExportTokenKinds;
 	const token = AscMath.CreateLaTeXExportToken;
 
-	function RegisterLaTeXExportNode(name, exporter)
+	function RegisterLaTeXExportNode(name, exporter, aliases)
 	{
-		nodeExporters[name] = exporter;
+		let index;
+		let alias;
+
+		nodeExportersByName[name] = exporter;
+
+		if (!aliases || !aliases.length)
+			return;
+
+		for (index = 0; index < aliases.length; index += 1)
+		{
+			alias = aliases[index];
+			if (!alias)
+				continue;
+
+			if (alias.type !== undefined && alias.type !== null)
+				nodeExportersByType[String(alias.type)] = exporter;
+
+			if (alias.kind !== undefined && alias.kind !== null)
+				nodeExportersByKind[String(alias.kind)] = exporter;
+
+			if (alias.classType !== undefined && alias.classType !== null)
+				nodeExportersByClassType[String(alias.classType)] = exporter;
+
+			if (alias.name)
+				nodeExportersByName[alias.name] = exporter;
+		}
 	}
 
 	function GetLaTeXExportNode(name)
 	{
-		return nodeExporters[name];
+		return nodeExportersByName[name];
 	}
 
 	function RegisterLaTeXExportSymbol(symbol, meta)
@@ -62,37 +90,98 @@
 	function ResetLaTeXExportRegistry()
 	{
 		let key;
-		for (key in nodeExporters)
-			delete nodeExporters[key];
+		for (key in nodeExportersByName)
+			delete nodeExportersByName[key];
+		for (key in nodeExportersByType)
+			delete nodeExportersByType[key];
+		for (key in nodeExportersByKind)
+			delete nodeExportersByKind[key];
+		for (key in nodeExportersByClassType)
+			delete nodeExportersByClassType[key];
 		for (key in symbolRegistry)
 			delete symbolRegistry[key];
+	}
+
+	function GetNodeIdentity(node)
+	{
+		if (!node)
+			return {name: "unknown-node", key: "unknown-node"};
+
+		if (node.constructor && node.constructor.name && nodeExportersByName[node.constructor.name])
+			return {name: node.constructor.name, key: node.constructor.name};
+
+		if (node.Type !== undefined && node.Type !== null && nodeExportersByType[String(node.Type)])
+			return {name: "type:" + node.Type, key: "type:" + node.Type};
+
+		if (node.kind !== undefined && node.kind !== null && nodeExportersByKind[String(node.kind)])
+			return {name: "kind:" + node.kind, key: "kind:" + node.kind};
+
+		if (node.ClassType !== undefined && node.ClassType !== null && nodeExportersByClassType[String(node.ClassType)])
+			return {name: "classType:" + node.ClassType, key: "classType:" + node.ClassType};
+
+		if (node.constructor && node.constructor.name)
+			return {name: node.constructor.name, key: node.constructor.name};
+
+		if (node.Type !== undefined && node.Type !== null)
+			return {name: "type:" + node.Type, key: "type:" + node.Type};
+
+		if (node.kind !== undefined && node.kind !== null)
+			return {name: "kind:" + node.kind, key: "kind:" + node.kind};
+
+		if (node.ClassType !== undefined && node.ClassType !== null)
+			return {name: "classType:" + node.ClassType, key: "classType:" + node.ClassType};
+
+		return {name: "unknown-node", key: "unknown-node"};
+	}
+
+	function ResolveLaTeXExportNode(node)
+	{
+		let identity = GetNodeIdentity(node);
+		let exporter = null;
+
+		if (node && node.constructor && node.constructor.name)
+			exporter = nodeExportersByName[node.constructor.name] || null;
+
+		if (!exporter && node && node.Type !== undefined && node.Type !== null)
+			exporter = nodeExportersByType[String(node.Type)] || null;
+
+		if (!exporter && node && node.kind !== undefined && node.kind !== null)
+			exporter = nodeExportersByKind[String(node.kind)] || null;
+
+		if (!exporter && node && node.ClassType !== undefined && node.ClassType !== null)
+			exporter = nodeExportersByClassType[String(node.ClassType)] || null;
+
+		return {
+			exporter: exporter,
+			identity: identity,
+		};
 	}
 
 	function GetFallbackNodeLaTeXTokens(node, context)
 	{
 		let text = "";
-		let nodeName = node && node.constructor ? node.constructor.name : "unknown-node";
+		let nodeIdentity = GetNodeIdentity(node);
 
 		if (context && context.validation)
-			context.validation.fallbacks.push(nodeName);
+			context.validation.fallbacks.push(nodeIdentity.name);
 
 		if (node && typeof node.GetTextOfElement === "function")
 			text = node.GetTextOfElement(true).GetText();
 		else if (node && typeof node.GetText === "function")
 			text = node.GetText(true);
 
-		return [token(K.Raw, text, "fallback:" + nodeName)];
+		return [token(K.Raw, text, "fallback:" + nodeIdentity.name)];
 	}
 
 	function ExportNodeToLaTeXTokens(node, context)
 	{
-		const nodeName = node && node.constructor ? node.constructor.name : "";
-		const exporter = nodeName ? GetLaTeXExportNode(nodeName) : null;
+		const resolved = ResolveLaTeXExportNode(node);
+		const exporter = resolved.exporter;
 
 		if (!exporter)
 		{
 			if (context && context.validation)
-				context.validation.unknownNodes.push(nodeName || "unknown-node");
+				context.validation.unknownNodes.push(resolved.identity.name || "unknown-node");
 
 			return GetFallbackNodeLaTeXTokens(node, context);
 		}
@@ -121,6 +210,7 @@
 	AscMath.RegisterLaTeXExportSymbol = RegisterLaTeXExportSymbol;
 	AscMath.GetLaTeXExportSymbol = GetLaTeXExportSymbol;
 	AscMath.ResetLaTeXExportRegistry = ResetLaTeXExportRegistry;
+	AscMath.ResolveLaTeXExportNode = ResolveLaTeXExportNode;
 	AscMath.GetFallbackNodeLaTeXTokens = GetFallbackNodeLaTeXTokens;
 	AscMath.ExportNodeToLaTeXTokens = ExportNodeToLaTeXTokens;
 	AscMath.ExportToLaTeX = ExportToLaTeX;

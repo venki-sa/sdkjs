@@ -168,6 +168,7 @@ function GetMathHtmlExportData(item)
 		legacyText: "",
 		strictText: "",
 		strictValidation: null,
+		strictSettings: null,
 	};
 
 	if (!item)
@@ -182,11 +183,10 @@ function GetMathHtmlExportData(item)
 		&& AscMath.c_oAscLaTeXExportMode
 		&& AscMath.c_oAscLaTeXExportMode.Strict)
 	{
+		result.strictSettings = AscMath.GetLaTeXExportSettings({mode: AscMath.c_oAscLaTeXExportMode.Strict});
 		result.strictValidation = AscMath.CreateLaTeXExportValidation();
-		result.strictText = item.GetLaTeXText({
-			mode: AscMath.c_oAscLaTeXExportMode.Strict,
-			validation: result.strictValidation,
-		}) || "";
+		result.strictSettings.validation = result.strictValidation;
+		result.strictText = item.GetLaTeXText(result.strictSettings) || "";
 	}
 
 	return result;
@@ -730,12 +730,16 @@ CopyProcessor.prototype =
 				}
 			} else if (para_Math === item.Type) {
 				var oMathExport = GetMathHtmlExportData(item);
-				var latexText = oMathExport.legacyText || oMathExport.strictText;
+				var oDefaultLaTeXSettings = window["AscMath"] && AscMath.GetLaTeXExportSettings ? AscMath.GetLaTeXExportSettings() : null;
+				var bPreferStrictHtml = !!(oDefaultLaTeXSettings
+					&& (oDefaultLaTeXSettings.htmlPreferStrict
+						|| oDefaultLaTeXSettings.mode === AscMath.c_oAscLaTeXExportMode.Strict));
+				var latexText = bPreferStrictHtml && oMathExport.strictText ? oMathExport.strictText : (oMathExport.legacyText || oMathExport.strictText);
 				if (latexText && latexText.trim()) {
 					var oSpan = new CopyElement("span");
 					oSpan.oAttributes["class"] = "math-tex";
 					oSpan.oAttributes["data-math-format"] = "latex";
-					oSpan.oAttributes["data-latex-mode"] = oMathExport.legacyText ? "legacy" : "strict";
+					oSpan.oAttributes["data-latex-mode"] = bPreferStrictHtml && oMathExport.strictText ? "strict" : (oMathExport.legacyText ? "legacy" : "strict");
 					oSpan.oAttributes["data-latex"] = CopyPasteCorrectString(latexText);
 					if (oMathExport.legacyText) {
 						oSpan.oAttributes["data-latex-legacy"] = CopyPasteCorrectString(oMathExport.legacyText);

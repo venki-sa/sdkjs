@@ -46,6 +46,84 @@
 		Error: "error",
 	};
 
+	function ParseBooleanFlag(value, defaultValue)
+	{
+		if (value === undefined || value === null || value === "")
+			return !!defaultValue;
+
+		if (typeof value === "boolean")
+			return value;
+
+		value = String(value).trim().toLowerCase();
+		if (value === "1" || value === "true" || value === "yes" || value === "on")
+			return true;
+		if (value === "0" || value === "false" || value === "no" || value === "off")
+			return false;
+
+		return !!defaultValue;
+	}
+
+	function NormalizeLaTeXExportMode(mode)
+	{
+		if (!mode)
+			return "";
+
+		mode = String(mode).trim().toLowerCase();
+		if (mode === LaTeXExportMode.Legacy
+			|| mode === LaTeXExportMode.Strict
+			|| mode === LaTeXExportMode.StrictShadow)
+		{
+			return mode;
+		}
+
+		return "";
+	}
+
+	function NormalizeLaTeXExportFallbackPolicy(policy)
+	{
+		if (!policy)
+			return "";
+
+		policy = String(policy).trim().toLowerCase();
+		if (policy === LaTeXExportFallbackPolicy.Legacy
+			|| policy === LaTeXExportFallbackPolicy.Error)
+		{
+			return policy;
+		}
+
+		return "";
+	}
+
+	function GetGlobalLaTeXExportConfig()
+	{
+		return window["ONLYOFFICE_LATEX_EXPORT"]
+			|| window["ONLYOFFICE_UI_FLAGS"]
+			|| null;
+	}
+
+	function GetProcessEnvironment()
+	{
+		return window.process && window.process.env ? window.process.env : null;
+	}
+
+	function GetLaTeXExportEnvironmentConfig()
+	{
+		let globalConfig = GetGlobalLaTeXExportConfig() || {};
+		let env = GetProcessEnvironment() || {};
+
+		return {
+			mode: NormalizeLaTeXExportMode(globalConfig.latexExportMode || globalConfig.mode || env.OO_LATEX_EXPORT_MODE),
+			fallbackPolicy: NormalizeLaTeXExportFallbackPolicy(globalConfig.latexExportFallbackPolicy || globalConfig.fallbackPolicy || env.OO_LATEX_EXPORT_FALLBACK_POLICY),
+			packageFeatures: {
+				color: ParseBooleanFlag(globalConfig.latexExportColor || (globalConfig.packageFeatures && globalConfig.packageFeatures.color) || env.OO_LATEX_EXPORT_ENABLE_COLOR, false),
+				highlight: ParseBooleanFlag(globalConfig.latexExportHighlight || (globalConfig.packageFeatures && globalConfig.packageFeatures.highlight) || env.OO_LATEX_EXPORT_ENABLE_HIGHLIGHT, false),
+				cancel: ParseBooleanFlag(globalConfig.latexExportCancel || (globalConfig.packageFeatures && globalConfig.packageFeatures.cancel) || env.OO_LATEX_EXPORT_ENABLE_CANCEL, false),
+			},
+			matrixSpacingHeuristics: ParseBooleanFlag(globalConfig.latexExportMatrixSpacing || globalConfig.matrixSpacingHeuristics || env.OO_LATEX_EXPORT_MATRIX_SPACING, false),
+			htmlPreferStrict: ParseBooleanFlag(globalConfig.latexExportHtmlPreferStrict || globalConfig.htmlPreferStrict || env.OO_LATEX_EXPORT_HTML_PREFER_STRICT, false),
+		};
+	}
+
 	function SetLaTeXExportMode(mode)
 	{
 		if (mode !== LaTeXExportMode.Legacy
@@ -82,12 +160,14 @@
 	function GetLaTeXExportSettings(options)
 	{
 		options = options || {};
+		let envConfig = GetLaTeXExportEnvironmentConfig();
 
 		return {
-			mode: options.mode || GetLaTeXExportMode(),
-			fallbackPolicy: options.fallbackPolicy || GetLaTeXExportFallbackPolicy(),
-			packageFeatures: options.packageFeatures || {},
-			matrixSpacingHeuristics: !!options.matrixSpacingHeuristics,
+			mode: options.mode || envConfig.mode || GetLaTeXExportMode(),
+			fallbackPolicy: options.fallbackPolicy || envConfig.fallbackPolicy || GetLaTeXExportFallbackPolicy(),
+			packageFeatures: options.packageFeatures || envConfig.packageFeatures || {},
+			matrixSpacingHeuristics: options.matrixSpacingHeuristics !== undefined ? !!options.matrixSpacingHeuristics : !!envConfig.matrixSpacingHeuristics,
+			htmlPreferStrict: options.htmlPreferStrict !== undefined ? !!options.htmlPreferStrict : !!envConfig.htmlPreferStrict,
 		};
 	}
 
@@ -97,5 +177,6 @@
 	AscMath.GetLaTeXExportMode = GetLaTeXExportMode;
 	AscMath.SetLaTeXExportFallbackPolicy = SetLaTeXExportFallbackPolicy;
 	AscMath.GetLaTeXExportFallbackPolicy = GetLaTeXExportFallbackPolicy;
+	AscMath.GetLaTeXExportEnvironmentConfig = GetLaTeXExportEnvironmentConfig;
 	AscMath.GetLaTeXExportSettings = GetLaTeXExportSettings;
 })(window);

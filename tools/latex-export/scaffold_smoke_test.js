@@ -20,10 +20,51 @@ const files = [
 
 global.window = global;
 global.AscMath = {};
+global.ONLYOFFICE_LATEX_EXPORT = null;
 global.AscCommon = {
 	encodeSurrogateChar(value) {
 		return String.fromCodePoint(value);
 	}
+};
+global.para_Math = 0x0026;
+global.para_Math_Run = 0x0036;
+global.para_Math_Content = 0x0037;
+global.para_Math_Text = 0x0038;
+global.para_Math_Ampersand = 0x0035;
+global.MATH_FRACTION = 0x1001;
+global.MATH_DEGREE = 0x1002;
+global.MATH_DEGREESubSup = 0x1003;
+global.MATH_RADICAL = 0x1004;
+global.MATH_DELIMITER = 0x1005;
+global.MATH_LIMIT = 0x1006;
+global.MATH_FUNCTION = 0x1007;
+global.MATH_NARY = 0x1008;
+global.MATH_ACCENT = 0x1009;
+global.MATH_BORDER_BOX = 0x1010;
+global.MATH_BOX = 0x1011;
+global.MATH_BAR = 0x1012;
+global.MATH_PHANTOM = 0x1013;
+global.MATH_MATRIX = 0x1014;
+global.MATH_EQ_ARRAY = 0x1015;
+global.MATH_GROUP_CHARACTER = 0x1016;
+global.AscDFH = {
+	historyitem_type_MathContent: 0x2001,
+	historyitem_type_frac: 0x2002,
+	historyitem_type_deg: 0x2003,
+	historyitem_type_deg_subsup: 0x2004,
+	historyitem_type_rad: 0x2005,
+	historyitem_type_delimiter: 0x2006,
+	historyitem_type_lim: 0x2007,
+	historyitem_type_mathFunc: 0x2008,
+	historyitem_type_nary: 0x2009,
+	historyitem_type_acc: 0x2010,
+	historyitem_type_borderBox: 0x2011,
+	historyitem_type_box: 0x2012,
+	historyitem_type_bar: 0x2013,
+	historyitem_type_phant: 0x2014,
+	historyitem_type_matrix: 0x2015,
+	historyitem_type_eqArr: 0x2016,
+	historyitem_type_groupChr: 0x2017,
 };
 global.LIMIT_LOW = 0;
 global.LIMIT_UP = 1;
@@ -98,6 +139,18 @@ const strictOutput = global.AscMath.ExportToLaTeX({
 });
 assert.strictEqual(strictOutput, "\\beta 2");
 
+const typeDispatchOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "BundledNode"},
+	Type: global.para_Math_Ampersand,
+	IsAlignPoint() { return false; },
+	GetText: function () {
+		return "legacy-type-dispatch";
+	}
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict
+});
+assert.strictEqual(typeDispatchOutput, "&");
+
 const fallbackOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "UnknownNode"},
 	GetText: function () {
@@ -117,6 +170,21 @@ const invisibleOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.CreateLaTeXExportContext()
 );
 assert.strictEqual(invisibleOutput, "");
+
+global.ONLYOFFICE_LATEX_EXPORT = {
+	mode: "strict",
+	htmlPreferStrict: true,
+	packageFeatures: {
+		color: true,
+	},
+	matrixSpacingHeuristics: true,
+};
+const configuredSettings = global.AscMath.GetLaTeXExportSettings();
+assert.strictEqual(configuredSettings.mode, global.AscMath.c_oAscLaTeXExportMode.Strict);
+assert.strictEqual(configuredSettings.htmlPreferStrict, true);
+assert.strictEqual(configuredSettings.packageFeatures.color, true);
+assert.strictEqual(configuredSettings.matrixSpacingHeuristics, true);
+global.ONLYOFFICE_LATEX_EXPORT = null;
 
 const textNode = function (value) {
 	return {

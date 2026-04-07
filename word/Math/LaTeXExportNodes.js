@@ -37,6 +37,11 @@
 	const K = AscMath.LaTeXExportTokenKinds;
 	const token = AscMath.CreateLaTeXExportToken;
 
+	function RegisterNode(name, exporter, aliases)
+	{
+		AscMath.RegisterLaTeXExportNode(name, exporter, aliases || []);
+	}
+
 	function PushValidationEntry(collection, value)
 	{
 		if (!collection || !value || collection.indexOf(value) !== -1)
@@ -1225,25 +1230,84 @@
 		return AscMath.GetFallbackNodeLaTeXTokens(node, context);
 	}
 
-	AscMath.RegisterLaTeXExportNode("ParaMath", ExportParaMath);
-	AscMath.RegisterLaTeXExportNode("CMathContent", ExportMathContent);
-	AscMath.RegisterLaTeXExportNode("CMathText", ExportMathTextNode);
-	AscMath.RegisterLaTeXExportNode("CMathAmp", ExportMathAmp);
-	AscMath.RegisterLaTeXExportNode("ParaRun", ExportParaRun);
-	AscMath.RegisterLaTeXExportNode("CFraction", ExportFraction);
-	AscMath.RegisterLaTeXExportNode("CDegree", ExportDegree);
-	AscMath.RegisterLaTeXExportNode("CDegreeSubSup", ExportDegreeSubSup);
-	AscMath.RegisterLaTeXExportNode("CRadical", ExportRadical);
-	AscMath.RegisterLaTeXExportNode("CDelimiter", ExportDelimiter);
-	AscMath.RegisterLaTeXExportNode("CLimit", ExportLimit);
-	AscMath.RegisterLaTeXExportNode("CMathFunc", ExportMathFunction);
-	AscMath.RegisterLaTeXExportNode("CNary", ExportNary);
-	AscMath.RegisterLaTeXExportNode("CAccent", ExportAccent);
-	AscMath.RegisterLaTeXExportNode("CBorderBox", ExportBorderBox);
-	AscMath.RegisterLaTeXExportNode("CBox", ExportBox);
-	AscMath.RegisterLaTeXExportNode("CBar", ExportBar);
-	AscMath.RegisterLaTeXExportNode("CPhantom", ExportPhantom);
-	AscMath.RegisterLaTeXExportNode("CMathMatrix", ExportMatrix);
-	AscMath.RegisterLaTeXExportNode("CEqArray", ExportEqArray);
-	AscMath.RegisterLaTeXExportNode("CGroupCharacter", ExportGroupCharacter);
+	RegisterNode("ParaMath", ExportParaMath, [
+		typeof para_Math !== "undefined" ? {type: para_Math} : null,
+	]);
+	RegisterNode("CMathContent", ExportMathContent, [
+		typeof para_Math_Content !== "undefined" ? {type: para_Math_Content} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_MathContent !== "undefined" ? {classType: AscDFH.historyitem_type_MathContent} : null,
+	]);
+	RegisterNode("CMathText", ExportMathTextNode, [
+		typeof para_Math_Text !== "undefined" ? {type: para_Math_Text} : null,
+	]);
+	RegisterNode("CMathAmp", ExportMathAmp, [
+		typeof para_Math_Ampersand !== "undefined" ? {type: para_Math_Ampersand} : null,
+	]);
+	RegisterNode("ParaRun", ExportParaRun, [
+		typeof para_Math_Run !== "undefined" ? {type: para_Math_Run} : null,
+	]);
+	RegisterNode("CFraction", ExportFraction, [
+		typeof MATH_FRACTION !== "undefined" ? {kind: MATH_FRACTION} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_frac !== "undefined" ? {classType: AscDFH.historyitem_type_frac} : null,
+	]);
+	RegisterNode("CDegree", ExportDegree, [
+		typeof MATH_DEGREE !== "undefined" ? {kind: MATH_DEGREE} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_deg !== "undefined" ? {classType: AscDFH.historyitem_type_deg} : null,
+	]);
+	RegisterNode("CDegreeSubSup", ExportDegreeSubSup, [
+		typeof MATH_DEGREESubSup !== "undefined" ? {kind: MATH_DEGREESubSup} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_deg_subsup !== "undefined" ? {classType: AscDFH.historyitem_type_deg_subsup} : null,
+	]);
+	RegisterNode("CRadical", ExportRadical, [
+		typeof MATH_RADICAL !== "undefined" ? {kind: MATH_RADICAL} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_rad !== "undefined" ? {classType: AscDFH.historyitem_type_rad} : null,
+	]);
+	RegisterNode("CDelimiter", ExportDelimiter, [
+		typeof MATH_DELIMITER !== "undefined" ? {kind: MATH_DELIMITER} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_delimiter !== "undefined" ? {classType: AscDFH.historyitem_type_delimiter} : null,
+	]);
+	RegisterNode("CLimit", ExportLimit, [
+		typeof MATH_LIMIT !== "undefined" ? {kind: MATH_LIMIT} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_lim !== "undefined" ? {classType: AscDFH.historyitem_type_lim} : null,
+	]);
+	RegisterNode("CMathFunc", ExportMathFunction, [
+		typeof MATH_FUNCTION !== "undefined" ? {kind: MATH_FUNCTION} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_mathFunc !== "undefined" ? {classType: AscDFH.historyitem_type_mathFunc} : null,
+	]);
+	RegisterNode("CNary", ExportNary, [
+		typeof MATH_NARY !== "undefined" ? {kind: MATH_NARY} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_nary !== "undefined" ? {classType: AscDFH.historyitem_type_nary} : null,
+	]);
+	RegisterNode("CAccent", ExportAccent, [
+		typeof MATH_ACCENT !== "undefined" ? {kind: MATH_ACCENT} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_acc !== "undefined" ? {classType: AscDFH.historyitem_type_acc} : null,
+	]);
+	RegisterNode("CBorderBox", ExportBorderBox, [
+		typeof MATH_BORDER_BOX !== "undefined" ? {kind: MATH_BORDER_BOX} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_borderBox !== "undefined" ? {classType: AscDFH.historyitem_type_borderBox} : null,
+	]);
+	RegisterNode("CBox", ExportBox, [
+		typeof MATH_BOX !== "undefined" ? {kind: MATH_BOX} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_box !== "undefined" ? {classType: AscDFH.historyitem_type_box} : null,
+	]);
+	RegisterNode("CBar", ExportBar, [
+		typeof MATH_BAR !== "undefined" ? {kind: MATH_BAR} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_bar !== "undefined" ? {classType: AscDFH.historyitem_type_bar} : null,
+	]);
+	RegisterNode("CPhantom", ExportPhantom, [
+		typeof MATH_PHANTOM !== "undefined" ? {kind: MATH_PHANTOM} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_phant !== "undefined" ? {classType: AscDFH.historyitem_type_phant} : null,
+	]);
+	RegisterNode("CMathMatrix", ExportMatrix, [
+		typeof MATH_MATRIX !== "undefined" ? {kind: MATH_MATRIX} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_matrix !== "undefined" ? {classType: AscDFH.historyitem_type_matrix} : null,
+	]);
+	RegisterNode("CEqArray", ExportEqArray, [
+		typeof MATH_EQ_ARRAY !== "undefined" ? {kind: MATH_EQ_ARRAY} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_eqArr !== "undefined" ? {classType: AscDFH.historyitem_type_eqArr} : null,
+	]);
+	RegisterNode("CGroupCharacter", ExportGroupCharacter, [
+		typeof MATH_GROUP_CHARACTER !== "undefined" ? {kind: MATH_GROUP_CHARACTER} : null,
+		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_groupChr !== "undefined" ? {classType: AscDFH.historyitem_type_groupChr} : null,
+	]);
 })(window);
