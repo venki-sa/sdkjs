@@ -5339,12 +5339,15 @@
 			}
 			else
 			{
-				strChunk = oCurrentElement;
+				strChunk = String(oCurrentElement);
 			}
 
 			// In LaTeX mode, insert a space when a \command (backslash + letters)
 			// is immediately followed by a letter, to prevent concatenation like
 			// \partialx instead of \partial x, or \sumN instead of \sum N.
+			// Note: Only checks ASCII letters [A-Za-z]. Non-ASCII math symbols
+			// (Greek etc.) are always serialized as \command form via SymbolsToLaTeX,
+			// so they start with \ not a bare Unicode letter.
 			if (this.LaTeX && strOutput.length > 0 && strChunk && strChunk.length > 0)
 			{
 				let chNext = strChunk.charCodeAt(0);
