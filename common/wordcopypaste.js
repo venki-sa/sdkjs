@@ -663,7 +663,7 @@ CopyProcessor.prototype =
 					var oSpan = new CopyElement("span");
 					oSpan.oAttributes["class"] = "math-tex";
 					oSpan.oAttributes["data-latex"] = CopyPasteCorrectString(latexText);
-					oSpan.addChild(new CopyElement(CopyPasteCorrectString(latexText), true));
+					oSpan.addChild(new CopyElement("\\(" + CopyPasteCorrectString(latexText) + "\\)", true));
 					oTarget.addChild(oSpan);
 				}
 			} else if (para_InlineLevelSdt === item.Type) {
