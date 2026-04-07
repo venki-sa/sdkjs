@@ -528,7 +528,7 @@ const directFormattingOutput = global.AscMath.ExportToLaTeX({
 		Color: {r: 1, g: 2, b: 3},
 		HighLight: 1,
 		VertAlign: 1,
-		RFonts: {Ascii: "Arial"},
+		RFonts: {Ascii: "Papyrus"},
 	},
 	GetText() { return "legacy-direct-formatting"; }
 }, {
@@ -547,6 +547,52 @@ assert.deepStrictEqual(directFormattingValidation.droppedProperties, [
 	"ParaRun.TextPr.VertAlign",
 	"ParaRun.TextPr.RFonts",
 ]);
+
+const sansRFontsValidation = global.AscMath.CreateLaTeXExportValidation();
+const sansRFontsOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "ParaRun"},
+	Content: [fakeLeaf("x")],
+	Pr: {
+		RFonts: {Ascii: "Arial"},
+	},
+	GetText() { return "legacy-rfonts-sans"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: sansRFontsValidation,
+});
+assert.strictEqual(sansRFontsOutput, "\\mathsf{x}");
+assert.deepStrictEqual(sansRFontsValidation.approximatedProperties, ["ParaRun.TextPr.RFonts"]);
+assert.deepStrictEqual(sansRFontsValidation.droppedProperties, []);
+
+const monoRFontsValidation = global.AscMath.CreateLaTeXExportValidation();
+const monoRFontsOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "ParaRun"},
+	Content: [fakeLeaf("x")],
+	Pr: {
+		RFonts: {Ascii: "Courier New"},
+	},
+	GetText() { return "legacy-rfonts-mono"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: monoRFontsValidation,
+});
+assert.strictEqual(monoRFontsOutput, "\\mathtt{x}");
+assert.deepStrictEqual(monoRFontsValidation.approximatedProperties, ["ParaRun.TextPr.RFonts"]);
+
+const serifRFontsValidation = global.AscMath.CreateLaTeXExportValidation();
+const serifRFontsOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "ParaRun"},
+	Content: [fakeLeaf("x")],
+	Pr: {
+		RFonts: {Ascii: "Times New Roman"},
+	},
+	GetText() { return "legacy-rfonts-serif"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: serifRFontsValidation,
+});
+assert.strictEqual(serifRFontsOutput, "\\mathrm{x}");
+assert.deepStrictEqual(serifRFontsValidation.approximatedProperties, ["ParaRun.TextPr.RFonts"]);
 
 const neutralMathFontValidation = global.AscMath.CreateLaTeXExportValidation();
 const neutralMathFontOutput = global.AscMath.ExportToLaTeX({

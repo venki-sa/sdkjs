@@ -92,6 +92,66 @@
 		return sawExplicitFont;
 	}
 
+	function GetPrimaryRFontName(rFonts)
+	{
+		let keys = ["Ascii", "HAnsi", "CS", "EastAsia"];
+		let index;
+		let name;
+
+		if (!rFonts)
+			return "";
+
+		for (index = 0; index < keys.length; index += 1)
+		{
+			name = GetRFontName(rFonts[keys[index]]);
+			if (name)
+				return name;
+		}
+
+		return "";
+	}
+
+	function GetRFontWrapperFromName(name)
+	{
+		let normalized = String(name || "").trim().toLowerCase();
+
+		if (!normalized || IsNeutralMathFontName(normalized))
+			return [];
+
+		if (/(courier|consolas|monaco|menlo|source code|code|mono|inconsolata)/.test(normalized))
+			return ["\\mathtt"];
+
+		if (/(arial|helvetica|calibri|verdana|tahoma|aptos|sans)/.test(normalized))
+			return ["\\mathsf"];
+
+		if (/(times|georgia|garamond|baskerville|palatino|book antiqua|serif|cambria)/.test(normalized))
+			return ["\\mathrm"];
+
+		return null;
+	}
+
+	function GetRunRFontWrappers(node, context)
+	{
+		let pr = node && typeof node.Get_CompiledPr === "function"
+			? node.Get_CompiledPr(false)
+			: (node ? node.Pr : null);
+		let fontName;
+		let wrappers;
+
+		if (!pr || !pr.RFonts || HasOnlyNeutralMathFonts(pr.RFonts))
+			return [];
+
+		fontName = GetPrimaryRFontName(pr.RFonts);
+		wrappers = GetRFontWrapperFromName(fontName);
+		if (!wrappers)
+			return [];
+
+		if (context && context.validation)
+			PushValidationEntry(context.validation.approximatedProperties, "ParaRun.TextPr.RFonts");
+
+		return wrappers;
+	}
+
 	function ExportLeafString(strValue, context)
 	{
 		let result = [];
@@ -240,8 +300,13 @@
 		if (pr.VertAlign !== undefined && pr.VertAlign !== null)
 			PushValidationEntry(context.validation.droppedProperties, "ParaRun.TextPr.VertAlign");
 
-		if (pr.RFonts && !HasOnlyNeutralMathFonts(pr.RFonts) && (pr.RFonts.Ascii || pr.RFonts.HAnsi || pr.RFonts.CS || pr.RFonts.EastAsia))
+		if (pr.RFonts
+			&& !HasOnlyNeutralMathFonts(pr.RFonts)
+			&& (pr.RFonts.Ascii || pr.RFonts.HAnsi || pr.RFonts.CS || pr.RFonts.EastAsia)
+			&& !GetRFontWrapperFromName(GetPrimaryRFontName(pr.RFonts)))
+		{
 			PushValidationEntry(context.validation.droppedProperties, "ParaRun.TextPr.RFonts");
+		}
 	}
 
 	function ExportParaRun(node, context)
@@ -273,6 +338,8 @@
 		}
 
 		wrappers = GetRunStyleWrappers(node, context);
+		if (wrappers.length === 0)
+			wrappers = GetRunRFontWrappers(node, context);
 		RecordRunTextPropertyFidelity(node, context);
 		if (wrappers.length > 0 && result.length > 0)
 			return ApplyCommandWrappers(wrappers, result);

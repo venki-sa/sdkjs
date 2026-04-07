@@ -30,7 +30,7 @@ FIDELITY_MAP = {
     "highlight": {"status": "pending", "detail": "visual formatting not yet exported to LaTeX"},
     "shd": {"status": "pending", "detail": "visual formatting not yet exported to LaTeX"},
     "vertAlign": {"status": "pending", "detail": "Word run vertical formatting not yet lowered"},
-    "rFonts": {"status": "pending", "detail": "Word font family selection not yet lowered"},
+    "rFonts": {"status": "approximated", "detail": "obvious font families lowered to semantic LaTeX wrappers; unknown families still dropped"},
     "solidFill": {"status": "metadata", "detail": "drawing formatting"},
     "textFill": {"status": "metadata", "detail": "drawing formatting"},
     "pos": {"status": "implemented", "detail": "bar/group position lowered to top/bottom command form"},
