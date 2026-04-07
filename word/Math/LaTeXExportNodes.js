@@ -672,7 +672,37 @@
 
 	function ExportPhantom(node, context)
 	{
-		return WrapCommandArgument("\\phantom", AscMath.ExportNodeToLaTeXTokens(node.getBase(), context));
+		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
+		let command = "\\phantom";
+		let pr = node.Pr || {};
+		let zeroHeight = !!(pr.zeroAsc || pr.zeroDesc);
+
+		if (pr.zeroWid && !zeroHeight)
+		{
+			command = "\\vphantom";
+			if (context && context.validation)
+				PushValidationEntry(context.validation.implementedProperties, "CPhantom.zeroWid");
+		}
+		else if (!pr.zeroWid && zeroHeight)
+		{
+			command = "\\hphantom";
+			if (context && context.validation)
+			{
+				if (pr.zeroAsc && pr.zeroDesc)
+					PushValidationEntry(context.validation.implementedProperties, "CPhantom.zeroAscDesc");
+				else
+					PushValidationEntry(context.validation.approximatedProperties, "CPhantom.partialHeight");
+			}
+		}
+		else if (pr.zeroWid && zeroHeight && context && context.validation)
+		{
+			PushValidationEntry(context.validation.approximatedProperties, "CPhantom.zeroWidHeight");
+		}
+
+		if (pr.transp && context && context.validation)
+			PushValidationEntry(context.validation.implementedProperties, "CPhantom.transp");
+
+		return WrapCommandArgument(command, base);
 	}
 
 	function ExportMatrixEnvironment(environmentName, rows, context)

@@ -43,6 +43,7 @@
 			forbiddenAliases: [],
 			fallbacks: [],
 			rendererViolations: [],
+			implementedProperties: [],
 			droppedProperties: [],
 			approximatedProperties: [],
 		};

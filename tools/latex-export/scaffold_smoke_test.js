@@ -326,6 +326,46 @@ const phantomOutput = global.AscMath.ExportToLaTeX({
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(phantomOutput, "\\phantom{x}");
 
+const phantomZeroWidthValidation = global.AscMath.CreateLaTeXExportValidation();
+const phantomZeroWidthOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CPhantom"},
+	Pr: {zeroWid: true},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-phantom-zero-width"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: phantomZeroWidthValidation,
+});
+assert.strictEqual(phantomZeroWidthOutput, "\\vphantom{x}");
+assert.deepStrictEqual(phantomZeroWidthValidation.implementedProperties, ["CPhantom.zeroWid"]);
+
+const phantomZeroHeightValidation = global.AscMath.CreateLaTeXExportValidation();
+const phantomZeroHeightOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CPhantom"},
+	Pr: {zeroAsc: true, zeroDesc: true},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-phantom-zero-height"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: phantomZeroHeightValidation,
+});
+assert.strictEqual(phantomZeroHeightOutput, "\\hphantom{x}");
+assert.deepStrictEqual(phantomZeroHeightValidation.implementedProperties, ["CPhantom.zeroAscDesc"]);
+
+const phantomMixedValidation = global.AscMath.CreateLaTeXExportValidation();
+const phantomMixedOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CPhantom"},
+	Pr: {zeroWid: true, zeroAsc: true, transp: true},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-phantom-mixed"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: phantomMixedValidation,
+});
+assert.strictEqual(phantomMixedOutput, "\\phantom{x}");
+assert.deepStrictEqual(phantomMixedValidation.implementedProperties, ["CPhantom.transp"]);
+assert.deepStrictEqual(phantomMixedValidation.approximatedProperties, ["CPhantom.zeroWidHeight"]);
+
 const matrixCellA = textNode("a".codePointAt(0));
 const matrixCellB = textNode("b".codePointAt(0));
 const matrixCellC = textNode("c".codePointAt(0));
