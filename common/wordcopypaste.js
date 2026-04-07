@@ -658,17 +658,13 @@ CopyProcessor.prototype =
 					this.CopyRunContent(item, oTarget, true);
 				}
 			} else if (para_Math === item.Type) {
-				var sSrc = item.MathToImageConverter();
-				if (null != sSrc && null != sSrc.ImageUrl) {
-					var oImg = new CopyElement("img");
-					if (sSrc.w_px > 0) {
-						oImg.oAttributes["width"] = sSrc.w_px;
-					}
-					if (sSrc.h_px > 0) {
-						oImg.oAttributes["height"] = sSrc.h_px;
-					}
-					oImg.oAttributes["src"] = sSrc.ImageUrl;
-					oTarget.addChild(oImg);
+				var latexText = item.GetText(true);
+				if (latexText) {
+					var oSpan = new CopyElement("span");
+					oSpan.oAttributes["class"] = "math-tex";
+					oSpan.oAttributes["data-latex"] = CopyPasteCorrectString(latexText);
+					oSpan.addChild(new CopyElement("\\(" + CopyPasteCorrectString(latexText) + "\\)", true));
+					oTarget.addChild(oSpan);
 				}
 			} else if (para_InlineLevelSdt === item.Type) {
 				this.CopyRunContent(item, oTarget);
