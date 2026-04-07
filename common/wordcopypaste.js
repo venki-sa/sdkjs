@@ -155,6 +155,13 @@ function GetStrictLaTeXFidelity(validation)
 	return "exact";
 }
 
+function SetJoinedCopyPasteAttribute(oElement, attributeName, values)
+{
+	var joined = JoinCopyPasteAttributeValues(values);
+	if (joined)
+		oElement.oAttributes[attributeName] = CopyPasteCorrectString(joined);
+}
+
 function GetMathHtmlExportData(item)
 {
 	let result = {
@@ -738,9 +745,11 @@ CopyProcessor.prototype =
 					}
 					if (oMathExport.strictValidation) {
 						oSpan.oAttributes["data-latex-strict-fidelity"] = GetStrictLaTeXFidelity(oMathExport.strictValidation);
-						if (oMathExport.strictValidation.requiredPackages && oMathExport.strictValidation.requiredPackages.length) {
-							oSpan.oAttributes["data-latex-strict-packages"] = CopyPasteCorrectString(JoinCopyPasteAttributeValues(oMathExport.strictValidation.requiredPackages));
-						}
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-packages", oMathExport.strictValidation.requiredPackages);
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-implemented", oMathExport.strictValidation.implementedProperties);
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-approximations", oMathExport.strictValidation.approximatedProperties);
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-dropped", oMathExport.strictValidation.droppedProperties);
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-fallbacks", oMathExport.strictValidation.fallbacks);
 						if (oMathExport.strictValidation.fallbacks && oMathExport.strictValidation.fallbacks.length) {
 							oSpan.oAttributes["data-latex-strict-has-fallback"] = "true";
 						}
