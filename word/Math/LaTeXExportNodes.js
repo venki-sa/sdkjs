@@ -269,6 +269,17 @@
 		return result.concat(WrapGroup(tokens));
 	}
 
+	function WrapLeftRight(leftDelimiter, rightDelimiter, tokens)
+	{
+		return [
+			token(K.Command, "\\left"),
+			token(K.Raw, NormalizeDelimiterSymbol(leftDelimiter, "left")),
+		].concat(tokens, [
+			token(K.Command, "\\right"),
+			token(K.Raw, NormalizeDelimiterSymbol(rightDelimiter, "right")),
+		]);
+	}
+
 	function WrapColorTokens(command, rgb, tokens)
 	{
 		if (!rgb)
@@ -345,6 +356,18 @@
 			return [];
 
 		return ExportLeafString(AscMath.GetLaTeXExportCodePointString(node.value), context);
+	}
+
+	function ExportMathAmp(node, context)
+	{
+		if (node && typeof node.IsAlignPoint === "function" && node.IsAlignPoint())
+		{
+			if (context && context.validation)
+				PushValidationEntry(context.validation.implementedProperties, "CMathAmp.alignPoint");
+			return [];
+		}
+
+		return [token(K.Raw, "&", "math-ampersand")];
 	}
 
 	function GetRunMathStyleInfo(node)
@@ -819,15 +842,88 @@
 
 	function ExportBorderBox(node, context)
 	{
-		if (context && context.validation && node.Pr)
+		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
+		let pr = node.Pr || {};
+		let result = base;
+		let topVisible = !pr.hideTop;
+		let botVisible = !pr.hideBot;
+		let leftVisible = !pr.hideLeft;
+		let rightVisible = !pr.hideRight;
+		let hasEdges = topVisible || botVisible || leftVisible || rightVisible;
+		let allEdges = topVisible && botVisible && leftVisible && rightVisible;
+		let hasAnyStrike = !!(pr.strikeH || pr.strikeV || pr.strikeTLBR || pr.strikeBLTR);
+		let canUseCancel = HasPackageFeature(context, "cancel");
+
+		if (allEdges)
 		{
-			if (node.Pr.hideTop || node.Pr.hideBot || node.Pr.hideLeft || node.Pr.hideRight)
+			result = WrapCommandArgument("\\boxed", result);
+		}
+		else if (topVisible && botVisible && !leftVisible && !rightVisible)
+		{
+			result = WrapCommandArgument("\\underline", WrapCommandArgument("\\overline", result));
+			if (context && context.validation)
 				PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.hiddenEdges");
-			if (node.Pr.strikeH || node.Pr.strikeV || node.Pr.strikeTLBR || node.Pr.strikeBLTR)
-				PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.strikes");
+		}
+		else if (topVisible && !botVisible && !leftVisible && !rightVisible)
+		{
+			result = WrapCommandArgument("\\overline", result);
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.hiddenEdges");
+		}
+		else if (!topVisible && botVisible && !leftVisible && !rightVisible)
+		{
+			result = WrapCommandArgument("\\underline", result);
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.hiddenEdges");
+		}
+		else if (!topVisible && !botVisible && leftVisible && rightVisible)
+		{
+			result = WrapLeftRight("|", "|", result);
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.hiddenEdges");
+		}
+		else if (hasEdges)
+		{
+			result = WrapCommandArgument("\\boxed", result);
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.hiddenEdges");
 		}
 
-		return WrapCommandArgument("\\boxed", AscMath.ExportNodeToLaTeXTokens(node.getBase(), context));
+		if (pr.strikeTLBR && pr.strikeBLTR && canUseCancel)
+		{
+			RequirePackage(context, "cancel");
+			result = WrapCommandArgument("\\xcancel", result);
+			if (context && context.validation)
+				PushValidationEntry(context.validation.implementedProperties, "CBorderBox.diagonalStrikes");
+		}
+		else if (pr.strikeTLBR && canUseCancel)
+		{
+			RequirePackage(context, "cancel");
+			result = WrapCommandArgument("\\cancel", result);
+			if (context && context.validation)
+				PushValidationEntry(context.validation.implementedProperties, "CBorderBox.diagonalStrikes");
+		}
+		else if (pr.strikeBLTR && canUseCancel)
+		{
+			RequirePackage(context, "cancel");
+			result = WrapCommandArgument("\\bcancel", result);
+			if (context && context.validation)
+				PushValidationEntry(context.validation.implementedProperties, "CBorderBox.diagonalStrikes");
+		}
+		else if ((pr.strikeTLBR || pr.strikeBLTR) && context && context.validation)
+		{
+			PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.diagonalStrikes");
+		}
+
+		if ((pr.strikeH || pr.strikeV) && context && context.validation)
+		{
+			PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.orthogonalStrikes");
+			PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.strikes");
+		}
+		else if (hasAnyStrike && context && context.validation && !pr.strikeTLBR && !pr.strikeBLTR)
+			PushValidationEntry(context.validation.approximatedProperties, "CBorderBox.strikes");
+
+		return result;
 	}
 
 	function ExportBox(node, context)
@@ -1132,6 +1228,7 @@
 	AscMath.RegisterLaTeXExportNode("ParaMath", ExportParaMath);
 	AscMath.RegisterLaTeXExportNode("CMathContent", ExportMathContent);
 	AscMath.RegisterLaTeXExportNode("CMathText", ExportMathTextNode);
+	AscMath.RegisterLaTeXExportNode("CMathAmp", ExportMathAmp);
 	AscMath.RegisterLaTeXExportNode("ParaRun", ExportParaRun);
 	AscMath.RegisterLaTeXExportNode("CFraction", ExportFraction);
 	AscMath.RegisterLaTeXExportNode("CDegree", ExportDegree);

@@ -316,6 +316,7 @@ const borderBoxApproxOutput = global.AscMath.ExportToLaTeX({
 assert.strictEqual(borderBoxApproxOutput, "\\boxed{x}");
 assert.deepStrictEqual(borderBoxValidation.approximatedProperties, [
 	"CBorderBox.hiddenEdges",
+	"CBorderBox.orthogonalStrikes",
 	"CBorderBox.strikes",
 ]);
 
@@ -508,6 +509,25 @@ assert.strictEqual(groupCharacterPackageOutput, "\\overparen{x}");
 assert.deepStrictEqual(groupCharacterPackageValidation.requiredPackages, ["mathtools"]);
 assert.deepStrictEqual(groupCharacterPackageValidation.approximatedProperties, ["CGroupCharacter.packageCommand"]);
 
+const mathAmpOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CMathAmp"},
+	IsAlignPoint() { return false; },
+	GetText() { return "&"; }
+}, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
+assert.strictEqual(mathAmpOutput, "&");
+
+const mathAmpAlignValidation = global.AscMath.CreateLaTeXExportValidation();
+const mathAmpAlignOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CMathAmp"},
+	IsAlignPoint() { return true; },
+	GetText() { return ""; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: mathAmpAlignValidation,
+});
+assert.strictEqual(mathAmpAlignOutput, "");
+assert.deepStrictEqual(mathAmpAlignValidation.implementedProperties, ["CMathAmp.alignPoint"]);
+
 const fakeLeaf = function (char) {
 	return {
 		GetCodePoint() {
@@ -656,6 +676,43 @@ assert.deepStrictEqual(packageFormattingValidation.implementedProperties, [
 	"ParaRun.TextPr.Highlight",
 ]);
 assert.deepStrictEqual(packageFormattingValidation.droppedProperties, []);
+
+const borderBoxEdgesValidation = global.AscMath.CreateLaTeXExportValidation();
+const borderBoxEdgesOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CBorderBox"},
+	Pr: {
+		hideLeft: true,
+		hideRight: true,
+		hideTop: false,
+		hideBot: false,
+	},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-border-box-edges"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: borderBoxEdgesValidation,
+});
+assert.strictEqual(borderBoxEdgesOutput, "\\underline{\\overline{x}}");
+assert.deepStrictEqual(borderBoxEdgesValidation.approximatedProperties, ["CBorderBox.hiddenEdges"]);
+
+const borderBoxCancelValidation = global.AscMath.CreateLaTeXExportValidation();
+const borderBoxCancelOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CBorderBox"},
+	Pr: {
+		strikeTLBR: true,
+	},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-border-box-cancel"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	packageFeatures: {
+		cancel: true,
+	},
+	validation: borderBoxCancelValidation,
+});
+assert.strictEqual(borderBoxCancelOutput, "\\cancel{\\boxed{x}}");
+assert.deepStrictEqual(borderBoxCancelValidation.requiredPackages, ["cancel"]);
+assert.deepStrictEqual(borderBoxCancelValidation.implementedProperties, ["CBorderBox.diagonalStrikes"]);
 
 const sansRFontsValidation = global.AscMath.CreateLaTeXExportValidation();
 const sansRFontsOutput = global.AscMath.ExportToLaTeX({
