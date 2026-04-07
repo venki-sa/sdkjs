@@ -161,6 +161,18 @@ const degreeOutput = global.AscMath.ExportToLaTeX({
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(degreeOutput, "x^{2}");
 
+const degreeSubSupFallbackValidation = global.AscMath.CreateLaTeXExportValidation();
+const degreeSubSupFallbackOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegreeSubSup"},
+	Pr: {type: -1},
+	GetText() { return "legacy-degree-subsup-fallback"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: degreeSubSupFallbackValidation,
+});
+assert.strictEqual(degreeSubSupFallbackOutput, "legacy-degree-subsup-fallback");
+assert.deepStrictEqual(degreeSubSupFallbackValidation.fallbacks, ["CDegreeSubSup.type:-1", "CDegreeSubSup"]);
+
 const limitOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CLimit"},
 	Pr: {type: global.LIMIT_LOW},
@@ -585,6 +597,17 @@ const radicalHiddenDegreeOutput = global.AscMath.ExportToLaTeX({
 });
 assert.strictEqual(radicalHiddenDegreeOutput, "\\sqrt{x}");
 assert.deepStrictEqual(radicalValidation.approximatedProperties, ["CRadical.degHide"]);
+
+const radicalWithoutSquareConstantOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CRadical"},
+	Pr: {type: 999},
+	getDegree() { return textNode("3".codePointAt(0)); },
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-radical-no-constant"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+});
+assert.strictEqual(radicalWithoutSquareConstantOutput, "\\sqrt[3]{x}");
 
 const naryValidation = global.AscMath.CreateLaTeXExportValidation();
 const naryHiddenOutput = global.AscMath.ExportToLaTeX({

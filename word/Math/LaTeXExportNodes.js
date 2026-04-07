@@ -348,7 +348,11 @@
 	function ExportDegreeSubSup(node, context)
 	{
 		if (node.Pr.type === -1)
+		{
+			if (context && context.validation)
+				PushValidationEntry(context.validation.fallbacks, "CDegreeSubSup.type:-1");
 			return AscMath.GetFallbackNodeLaTeXTokens(node, context);
+		}
 
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let lower = AscMath.ExportNodeToLaTeXTokens(node.getLowerIterator(), context);
@@ -369,8 +373,9 @@
 		let degree = [];
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let result = [token(K.Command, "\\sqrt")];
+		let isSquareRadical = typeof SQUARE_RADICAL !== "undefined" && node.Pr && node.Pr.type === SQUARE_RADICAL;
 
-		if (!(node.Pr && (node.Pr.degHide || node.Pr.type === SQUARE_RADICAL)))
+		if (!(node.Pr && (node.Pr.degHide || isSquareRadical)))
 			degree = AscMath.ExportNodeToLaTeXTokens(node.getDegree(), context);
 		else if (context && context.validation)
 			PushValidationEntry(context.validation.approximatedProperties, "CRadical.degHide");
@@ -414,16 +419,17 @@
 	{
 		let start = node.Pr.begChr === -1 ? "" : String.fromCharCode((node.begOper.code || node.Pr.begChr) || 40);
 		let end = node.Pr.endChr === -1 ? "" : String.fromCharCode((node.endOper.code || node.Pr.endChr) || 41);
+		let contentCount = node.getColumnsCount();
 		let result = [
 			token(K.Command, "\\left"),
 			token(K.Raw, NormalizeDelimiterSymbol(start, "left")),
 		];
 
-		for (let i = 0; i < node.getColumnsCount(); i++)
+		for (let i = 0; i < contentCount; i++)
 		{
 			result = result.concat(AscMath.ExportNodeToLaTeXTokens(node.Content[i], context));
 
-			if (node.Content.length > 1 && i < node.Content.length - 1)
+			if (contentCount > 1 && i < contentCount - 1)
 				result.push(token(K.Command, "\\mid"));
 		}
 
@@ -485,8 +491,9 @@
 			{
 				if (funcTokens[index].kind === K.Identifier || funcTokens[index].kind === K.Text)
 				{
-					funcTokens[index] = token(K.Command, "\\" + rawName, "function:" + rawName);
-					funcTokens.splice(index + 1, rawName.length - 1);
+					funcTokens = funcTokens.slice(0, index)
+						.concat([token(K.Command, "\\" + rawName, "function:" + rawName)])
+						.concat(funcTokens.slice(index + rawName.length));
 					break;
 				}
 			}

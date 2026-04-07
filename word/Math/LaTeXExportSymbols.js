@@ -122,7 +122,7 @@
 			return [token(K.Raw, mapped, "symbol:" + symbol)];
 		}
 
-		if (/^[+\-=*/(),.;:<>[\]|!]$/.test(symbol))
+		if (/^[+\-=*/(),.;:<>[\]|!@~?'"]$/.test(symbol))
 			return [token(K.Raw, symbol, "symbol:" + symbol)];
 
 		if (context && context.validation)

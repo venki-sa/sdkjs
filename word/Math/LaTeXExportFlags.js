@@ -46,9 +46,6 @@
 		Error: "error",
 	};
 
-	let currentMode = LaTeXExportMode.Legacy;
-	let currentFallbackPolicy = LaTeXExportFallbackPolicy.Legacy;
-
 	function SetLaTeXExportMode(mode)
 	{
 		if (mode !== LaTeXExportMode.Legacy
@@ -58,12 +55,12 @@
 			throw new Error("Unknown LaTeX export mode: " + mode);
 		}
 
-		currentMode = mode;
+		AscMath.defaultLaTeXExportMode = mode;
 	}
 
 	function GetLaTeXExportMode()
 	{
-		return currentMode;
+		return AscMath.defaultLaTeXExportMode || LaTeXExportMode.Legacy;
 	}
 
 	function SetLaTeXExportFallbackPolicy(policy)
@@ -74,12 +71,12 @@
 			throw new Error("Unknown LaTeX export fallback policy: " + policy);
 		}
 
-		currentFallbackPolicy = policy;
+		AscMath.defaultLaTeXExportFallbackPolicy = policy;
 	}
 
 	function GetLaTeXExportFallbackPolicy()
 	{
-		return currentFallbackPolicy;
+		return AscMath.defaultLaTeXExportFallbackPolicy || LaTeXExportFallbackPolicy.Legacy;
 	}
 
 	function GetLaTeXExportSettings(options)
@@ -87,8 +84,8 @@
 		options = options || {};
 
 		return {
-			mode: options.mode || currentMode,
-			fallbackPolicy: options.fallbackPolicy || currentFallbackPolicy,
+			mode: options.mode || GetLaTeXExportMode(),
+			fallbackPolicy: options.fallbackPolicy || GetLaTeXExportFallbackPolicy(),
 		};
 	}
 
