@@ -540,7 +540,7 @@
 			wrappers = GetRunRFontWrappers(node, context);
 		RecordRunTextPropertyFidelity(node, context);
 		if (wrappers.length > 0 && result.length > 0)
-			result = ApplyCommandWrappers(wrappers, result);
+			result = ApplyCommandWrappersToEligibleSpans(wrappers, result);
 
 		return ApplyRunPackageFormatting(node, result, context);
 	}
@@ -555,6 +555,16 @@
 		return [token(K.Command, command)].concat(WrapGroup(tokens));
 	}
 
+	function IsStyleEligibleToken(currentToken)
+	{
+		if (!currentToken)
+			return false;
+
+		return currentToken.kind === K.Identifier
+			|| currentToken.kind === K.Number
+			|| currentToken.kind === K.Text;
+	}
+
 	function ApplyCommandWrappers(commands, tokens)
 	{
 		let result = tokens;
@@ -563,6 +573,39 @@
 		for (index = 0; index < commands.length; index += 1)
 			result = WrapCommandArgument(commands[index], result);
 
+		return result;
+	}
+
+	function ApplyCommandWrappersToEligibleSpans(commands, tokens)
+	{
+		let result = [];
+		let span = [];
+		let index;
+		let currentToken;
+
+		function FlushSpan()
+		{
+			if (span.length === 0)
+				return;
+
+			result = result.concat(ApplyCommandWrappers(commands, span));
+			span = [];
+		}
+
+		for (index = 0; index < tokens.length; index += 1)
+		{
+			currentToken = tokens[index];
+			if (IsStyleEligibleToken(currentToken))
+			{
+				span.push(currentToken);
+				continue;
+			}
+
+			FlushSpan();
+			result.push(currentToken);
+		}
+
+		FlushSpan();
 		return result;
 	}
 

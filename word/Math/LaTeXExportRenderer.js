@@ -35,6 +35,183 @@
 (function (window) {
 	const AscMath = window["AscMath"] = window["AscMath"] || {};
 	const TokenKinds = AscMath.LaTeXExportTokenKinds;
+	const STYLE_WRAPPER_COMMANDS = {
+		"\\mathbf": true,
+		"\\mathit": true,
+		"\\mathrm": true,
+		"\\mathsf": true,
+		"\\mathtt": true,
+		"\\mathbb": true,
+		"\\mathcal": true,
+		"\\mathfrak": true,
+	};
+	const NON_STYLEABLE_COMMANDS = {
+		"\\left": true,
+		"\\right": true,
+		"\\middle": true,
+		"\\limits": true,
+		"\\nolimits": true,
+		"\\textcolor": true,
+		"\\colorbox": true,
+		"\\frac": true,
+		"\\binom": true,
+		"\\sqrt": true,
+		"\\bar": true,
+		"\\overline": true,
+		"\\hat": true,
+		"\\widehat": true,
+		"\\vec": true,
+		"\\operatorname": true,
+		"\\mathop": true,
+		"\\begin": true,
+		"\\end": true,
+	};
+
+	function CreateToken(kind, value, source)
+	{
+		return AscMath.CreateLaTeXExportToken(kind, value, source);
+	}
+
+	function IsStyleWrapperCommand(token)
+	{
+		return !!(token
+			&& token.kind === TokenKinds.Command
+			&& STYLE_WRAPPER_COMMANDS[token.value]);
+	}
+
+	function IsOpenToken(token)
+	{
+		return !!(token
+			&& (token.kind === TokenKinds.GroupOpen
+				|| token.kind === TokenKinds.SubOpen
+				|| token.kind === TokenKinds.SupOpen));
+	}
+
+	function IsStyleEligibleToken(token)
+	{
+		return !!(token
+			&& (token.kind === TokenKinds.Identifier
+				|| token.kind === TokenKinds.Number
+				|| token.kind === TokenKinds.Text));
+	}
+
+	function IsStyleEligibleStandaloneCommand(token, nextToken)
+	{
+		return !!(token
+			&& token.kind === TokenKinds.Command
+			&& !STYLE_WRAPPER_COMMANDS[token.value]
+			&& !NON_STYLEABLE_COMMANDS[token.value]
+			&& !IsOpenToken(nextToken));
+	}
+
+	function WrapTokensWithCommands(commands, tokens)
+	{
+		let result = tokens;
+		let index;
+
+		for (index = 0; index < commands.length; index += 1)
+			result = [CreateToken(TokenKinds.Command, commands[index])].concat(
+				CreateToken(TokenKinds.GroupOpen, "{"),
+				result,
+				CreateToken(TokenKinds.GroupClose, "}")
+			);
+
+		return result;
+	}
+
+	function MergeStyleCommands(currentCommand, activeStyles)
+	{
+		let merged = [currentCommand];
+		let index;
+
+		for (index = 0; index < activeStyles.length; index += 1)
+		{
+			if (merged.indexOf(activeStyles[index]) === -1)
+				merged.push(activeStyles[index]);
+		}
+
+		return merged;
+	}
+
+	function ParseNormalizedSequence(tokens, startIndex, stopKind, activeStyles)
+	{
+		let result = [];
+		let index = startIndex || 0;
+		let currentToken;
+		let nested;
+		let appliedStyles;
+
+		while (index < tokens.length)
+		{
+			currentToken = tokens[index];
+			if (!currentToken)
+			{
+				index += 1;
+				continue;
+			}
+
+			if (stopKind && currentToken.kind === stopKind)
+				break;
+
+			if (IsStyleWrapperCommand(currentToken)
+				&& tokens[index + 1]
+				&& tokens[index + 1].kind === TokenKinds.GroupOpen)
+			{
+				nested = ParseNormalizedSequence(tokens, index + 2, TokenKinds.GroupClose, MergeStyleCommands(currentToken.value, activeStyles));
+				result = result.concat(nested.tokens);
+				index = nested.nextIndex + 1;
+				continue;
+			}
+
+			if (currentToken.kind === TokenKinds.Command
+				&& tokens[index + 1]
+				&& IsOpenToken(tokens[index + 1]))
+			{
+				nested = ParseNormalizedSequence(tokens, index + 2, TokenKinds.GroupClose, activeStyles);
+				result.push(currentToken, tokens[index + 1]);
+				result = result.concat(nested.tokens);
+				result.push(tokens[nested.nextIndex]);
+				index = nested.nextIndex + 1;
+				continue;
+			}
+
+			if (IsOpenToken(currentToken))
+			{
+				nested = ParseNormalizedSequence(tokens, index + 1, TokenKinds.GroupClose, activeStyles);
+				result.push(currentToken);
+				result = result.concat(nested.tokens);
+				result.push(tokens[nested.nextIndex]);
+				index = nested.nextIndex + 1;
+				continue;
+			}
+
+			if ((IsStyleEligibleToken(currentToken) || IsStyleEligibleStandaloneCommand(currentToken, tokens[index + 1]))
+				&& activeStyles.length > 0)
+			{
+				appliedStyles = WrapTokensWithCommands(activeStyles, [currentToken]);
+				result = result.concat(appliedStyles);
+			}
+			else
+			{
+				result.push(currentToken);
+			}
+
+			index += 1;
+		}
+
+		return {
+			tokens: result,
+			nextIndex: index,
+		};
+	}
+
+	function NormalizeLaTeXExportTokens(tokens)
+	{
+		if (!tokens || tokens.length === 0)
+			return [];
+
+		return ParseNormalizedSequence(tokens, 0, null, []).tokens;
+	}
 
 	function IsBoundarySpaceRequired(prevToken, nextToken)
 	{
@@ -55,10 +232,11 @@
 	{
 		let output = "";
 		let prevVisibleToken = null;
+		let normalizedTokens = NormalizeLaTeXExportTokens(tokens);
 
-		for (let index = 0; index < tokens.length; index++)
+		for (let index = 0; index < normalizedTokens.length; index++)
 		{
-			let token = tokens[index];
+			let token = normalizedTokens[index];
 			if (!token || token.kind === TokenKinds.Invisible)
 				continue;
 
@@ -75,5 +253,6 @@
 	}
 
 	AscMath.IsLaTeXExportBoundarySpaceRequired = IsBoundarySpaceRequired;
+	AscMath.NormalizeLaTeXExportTokens = NormalizeLaTeXExportTokens;
 	AscMath.RenderLaTeXExportTokens = RenderLaTeXExportTokens;
 })(window);

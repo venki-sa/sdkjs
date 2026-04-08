@@ -123,6 +123,56 @@ output = global.AscMath.RenderLaTeXExportTokens([
 ], global.AscMath.CreateLaTeXExportContext());
 assert.strictEqual(output, "\\sqrt{x}");
 
+output = global.AscMath.RenderLaTeXExportTokens([
+	token(K.Command, "\\mathit"),
+	token(K.GroupOpen, "{"),
+	token(K.Command, "\\mathbf"),
+	token(K.GroupOpen, "{"),
+	token(K.Identifier, "I"),
+	token(K.Operator, "|"),
+	token(K.GroupClose, "}"),
+	token(K.Command, "\\bar"),
+	token(K.GroupOpen, "{"),
+	token(K.Command, "\\mathit"),
+	token(K.GroupOpen, "{"),
+	token(K.Command, "\\mathbf"),
+	token(K.GroupOpen, "{"),
+	token(K.Identifier, "n"),
+	token(K.GroupClose, "}"),
+	token(K.GroupClose, "}"),
+	token(K.GroupClose, "}"),
+	token(K.GroupClose, "}"),
+], global.AscMath.CreateLaTeXExportContext());
+assert.strictEqual(output, "\\mathit{\\mathbf{I}}|\\bar{\\mathit{\\mathbf{n}}}");
+
+output = global.AscMath.RenderLaTeXExportTokens([
+	token(K.Command, "\\mathit"),
+	token(K.GroupOpen, "{"),
+	token(K.Command, "\\mathbf"),
+	token(K.GroupOpen, "{"),
+	token(K.Command, "\\beta"),
+	token(K.GroupClose, "}"),
+	token(K.GroupClose, "}"),
+	token(K.SubOpen, "_{"),
+	token(K.Command, "\\mathit"),
+	token(K.GroupOpen, "{"),
+	token(K.Command, "\\mathbf"),
+	token(K.GroupOpen, "{"),
+	token(K.Identifier, "N"),
+	token(K.GroupClose, "}"),
+	token(K.GroupClose, "}"),
+	token(K.GroupClose, "}"),
+	token(K.Command, "\\mathit"),
+	token(K.GroupOpen, "{"),
+	token(K.Command, "\\mathbf"),
+	token(K.GroupOpen, "{"),
+	token(K.Operator, ","),
+	token(K.Space, " "),
+	token(K.GroupClose, "}"),
+	token(K.GroupClose, "}"),
+], global.AscMath.CreateLaTeXExportContext());
+assert.strictEqual(output, "\\mathit{\\mathbf{\\beta}}_{\\mathit{\\mathbf{N}}}, ");
+
 global.AscMath.SetLaTeXExportMode(global.AscMath.c_oAscLaTeXExportMode.Strict);
 global.AscMath.RegisterLaTeXExportNode("FakeNode", function () {
 	return [
@@ -659,6 +709,19 @@ const romanBoldOutput = global.AscMath.ExportToLaTeX({
 	GetText() { return "legacy-roman-bold"; }
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(romanBoldOutput, "\\mathbf{x}");
+
+const mixedStyledRunOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "ParaRun"},
+	Content: [fakeLeaf("I"), fakeLeaf("|"), fakeLeaf("n")],
+	MathPrp: {
+		lit: false,
+		GetCompiled_ScrStyles() {
+			return {nor: false, scr: global.TXT_ROMAN, sty: global.STY_BI};
+		}
+	},
+	GetText() { return "legacy-mixed-styled-run"; }
+}, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
+assert.strictEqual(mixedStyledRunOutput, "\\mathit{\\mathbf{I}}|\\mathit{\\mathbf{n}}");
 
 const doubleStruckOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "ParaRun"},
