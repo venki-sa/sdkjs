@@ -520,6 +520,50 @@ const naryNoLimitsOutput = global.AscMath.ExportToLaTeX({
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(naryNoLimitsOutput, "\\int\\nolimits_{0}^{1}x");
 
+const previousNaryMathSettingsGetter = global.Get_WordDocumentDefaultMathSettings;
+global.Get_WordDocumentDefaultMathSettings = function () {
+	return {
+		GetPr() {
+			return {
+				intLim: global.NARY_UndOvr,
+				naryLim: global.NARY_SubSup,
+			};
+		}
+	};
+};
+
+const defaultIntegralNaryValidation = global.AscMath.CreateLaTeXExportValidation();
+const defaultIntegralNaryOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CNary"},
+	Pr: {chr: "∫".charCodeAt(0)},
+	getLowerIterator() { return textNode("0".codePointAt(0)); },
+	getUpperIterator() { return textNode("1".codePointAt(0)); },
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-nary-default-integral"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: defaultIntegralNaryValidation,
+});
+assert.strictEqual(defaultIntegralNaryOutput, "\\int\\limits_{0}^{1}x");
+assert.ok(defaultIntegralNaryValidation.implementedProperties.includes("MathPr.intLim"));
+
+const defaultSumNaryValidation = global.AscMath.CreateLaTeXExportValidation();
+const defaultSumNaryOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CNary"},
+	Pr: {chr: "∑".charCodeAt(0)},
+	getLowerIterator() { return textNode("i".codePointAt(0)); },
+	getUpperIterator() { return textNode("n".codePointAt(0)); },
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-nary-default-sum"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: defaultSumNaryValidation,
+});
+assert.strictEqual(defaultSumNaryOutput, "\\sum\\nolimits_{i}^{n}x");
+assert.ok(defaultSumNaryValidation.implementedProperties.includes("MathPr.naryLim"));
+
+global.Get_WordDocumentDefaultMathSettings = previousNaryMathSettingsGetter;
+
 const accentOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CAccent"},
 	Pr: {chr: 769},
@@ -586,6 +630,19 @@ const phantomOutput = global.AscMath.ExportToLaTeX({
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(phantomOutput, "\\phantom{x}");
 
+const phantomShowValidation = global.AscMath.CreateLaTeXExportValidation();
+const phantomShowOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CPhantom"},
+	Pr: {show: true},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-phantom-show"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: phantomShowValidation,
+});
+assert.strictEqual(phantomShowOutput, "x");
+assert.deepStrictEqual(phantomShowValidation.implementedProperties, ["CPhantom.show"]);
+
 const phantomZeroWidthValidation = global.AscMath.CreateLaTeXExportValidation();
 const phantomZeroWidthOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CPhantom"},
@@ -626,6 +683,27 @@ assert.strictEqual(phantomMixedOutput, "\\phantom{x}");
 assert.deepStrictEqual(phantomMixedValidation.implementedProperties, ["CPhantom.transp"]);
 assert.deepStrictEqual(phantomMixedValidation.approximatedProperties, ["CPhantom.zeroWidHeight"]);
 
+const delimiterPropertyValidation = global.AscMath.CreateLaTeXExportValidation();
+const delimiterPropertyOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDelimiter"},
+	Pr: {
+		begChr: "(".charCodeAt(0),
+		endChr: ")".charCodeAt(0),
+		grow: true,
+		shp: 1,
+	},
+	begOper: {code: "(".charCodeAt(0)},
+	endOper: {code: ")".charCodeAt(0)},
+	getColumnsCount() { return 1; },
+	Content: [textNode("x".codePointAt(0))],
+	GetText() { return "legacy-delimiter-properties"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: delimiterPropertyValidation,
+});
+assert.strictEqual(delimiterPropertyOutput, "\\left(x\\right)");
+assert.deepStrictEqual(delimiterPropertyValidation.approximatedProperties, ["CDelimiter.grow", "CDelimiter.shp"]);
+
 const matrixCellA = textNode("a".codePointAt(0));
 const matrixCellB = textNode("b".codePointAt(0));
 const matrixCellC = textNode("c".codePointAt(0));
@@ -653,8 +731,10 @@ const matrixAlignOutput = global.AscMath.ExportToLaTeX({
 		begChr: "[".charCodeAt(0),
 		endChr: "]".charCodeAt(0),
 		cGp: 10,
+		cGpRule: 1,
 		cSp: 20,
 		rSp: 30,
+		rSpRule: 2,
 		plcHide: true,
 		baseJc: global.BASEJC_TOP,
 		Get_ColumnMcJc(index) {
@@ -673,6 +753,8 @@ const matrixAlignOutput = global.AscMath.ExportToLaTeX({
 });
 assert.strictEqual(matrixAlignOutput, "\\left[\\begin{array}{lr}a&b\\end{array}\\right]");
 assert.deepStrictEqual(matrixAlignValidation.approximatedProperties, [
+	"CMathMatrix.cGpRule",
+	"CMathMatrix.rSpRule",
 	"CMathMatrix.mcJc",
 	"CMathMatrix.cGp",
 	"CMathMatrix.cSp",
@@ -1218,6 +1300,8 @@ const eqArrayDistanceOutput = global.AscMath.ExportToLaTeX({
 		baseJc: global.BASEJC_CENTER,
 		maxDist: 1,
 		objDist: 1,
+		rSpRule: 1,
+		rSp: 30,
 	},
 	getElement() { return textNode("x".codePointAt(0)); },
 	GetText() { return "legacy-eqarr-distance"; }
@@ -1226,7 +1310,7 @@ const eqArrayDistanceOutput = global.AscMath.ExportToLaTeX({
 	validation: eqArrayDistanceValidation,
 });
 assert.strictEqual(eqArrayDistanceOutput, "\\begin{array}{c}x\\end{array}");
-assert.deepStrictEqual(eqArrayDistanceValidation.approximatedProperties, ["CEqArray.maxDist", "CEqArray.objDist"]);
+assert.deepStrictEqual(eqArrayDistanceValidation.approximatedProperties, ["CEqArray.maxDist", "CEqArray.objDist", "CEqArray.rSpRule", "CEqArray.rSp"]);
 
 const boxPropertyValidation = global.AscMath.CreateLaTeXExportValidation();
 const boxPropertyOutput = global.AscMath.ExportToLaTeX({
@@ -1235,6 +1319,7 @@ const boxPropertyOutput = global.AscMath.ExportToLaTeX({
 		opEmu: true,
 		noBreak: true,
 		diff: true,
+		aln: true,
 		brk: {},
 	},
 	getBase() { return textNode("x".codePointAt(0)); },
@@ -1244,6 +1329,185 @@ const boxPropertyOutput = global.AscMath.ExportToLaTeX({
 	validation: boxPropertyValidation,
 });
 assert.strictEqual(boxPropertyOutput, "{x}");
-assert.deepStrictEqual(boxPropertyValidation.approximatedProperties, ["CBox.opEmu", "CBox.noBreak", "CBox.diff", "CBox.brk"]);
+assert.deepStrictEqual(boxPropertyValidation.approximatedProperties, ["CBox.opEmu", "CBox.noBreak", "CBox.diff", "CBox.aln", "CBox.brk"]);
+
+const ctrlPr = {
+	Is_Empty() {
+		return false;
+	}
+};
+[
+	{
+		label: "CAccent.ctrlPr",
+		node: {
+			constructor: {name: "CAccent"},
+			Pr: {chr: 769, GetRPr() { return ctrlPr; }},
+			getBase() { return textNode("x".codePointAt(0)); },
+			GetText() { return "legacy-ctrlpr-accent"; }
+		}
+	},
+	{
+		label: "CDelimiter.ctrlPr",
+		node: {
+			constructor: {name: "CDelimiter"},
+			Pr: {
+				begChr: "(".charCodeAt(0),
+				endChr: ")".charCodeAt(0),
+				GetRPr() { return ctrlPr; }
+			},
+			begOper: {code: "(".charCodeAt(0)},
+			endOper: {code: ")".charCodeAt(0)},
+			getColumnsCount() { return 1; },
+			Content: [textNode("x".codePointAt(0))],
+			GetText() { return "legacy-ctrlpr-delimiter"; }
+		}
+	},
+	{
+		label: "CNary.ctrlPr",
+		node: {
+			constructor: {name: "CNary"},
+			Pr: {chr: "∑".charCodeAt(0), limLoc: global.NARY_UndOvr, GetRPr() { return ctrlPr; }},
+			getLowerIterator() { return textNode("i".codePointAt(0)); },
+			getUpperIterator() { return textNode("n".codePointAt(0)); },
+			getBase() { return textNode("x".codePointAt(0)); },
+			GetText() { return "legacy-ctrlpr-nary"; }
+		}
+	},
+	{
+		label: "CMathMatrix.ctrlPr",
+		node: {
+			constructor: {name: "CMathMatrix"},
+			Pr: {GetRPr() { return ctrlPr; }},
+			getRowsCount() { return 1; },
+			getColsCount() { return 1; },
+			getContentElement() { return textNode("x".codePointAt(0)); },
+			GetText() { return "legacy-ctrlpr-matrix"; }
+		}
+	},
+	{
+		label: "CEqArray.ctrlPr",
+		node: {
+			constructor: {name: "CEqArray"},
+			Pr: {row: 1, GetRPr() { return ctrlPr; }},
+			getElement() { return textNode("x".codePointAt(0)); },
+			GetText() { return "legacy-ctrlpr-eqarr"; }
+		}
+	}
+].forEach(({label, node}) => {
+	const validation = global.AscMath.CreateLaTeXExportValidation();
+	global.AscMath.ExportToLaTeX(node, {
+		mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+		validation,
+	});
+	assert.ok(validation.droppedProperties.includes(label), label);
+});
+
+const runBreakValidation = global.AscMath.CreateLaTeXExportValidation();
+const runBreakOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "ParaRun"},
+	Content: [fakeLeaf("x")],
+	MathPrp: {
+		aln: true,
+		brk: {alnAt: 1},
+		GetCompiled_ScrStyles() {
+			return {nor: false, scr: global.TXT_ROMAN, sty: global.STY_PLAIN};
+		}
+	},
+	GetText() { return "legacy-run-break"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: runBreakValidation,
+});
+assert.strictEqual(runBreakOutput, "\\mathrm{x}");
+assert.ok(runBreakValidation.approximatedProperties.includes("ParaRun.MathPrp.aln"));
+assert.ok(runBreakValidation.droppedProperties.includes("ParaRun.MathPrp.brk"));
+
+[
+	{
+		node: {
+			constructor: {name: "ParaHyperlink"},
+			Content: [textNode("x".codePointAt(0)), textNode("y".codePointAt(0))],
+			GetText() { return "legacy-wrapper-hyperlink"; }
+		},
+		expected: "xy"
+	},
+	{
+		node: {
+			constructor: {name: "ParaField"},
+			Content: [textNode("f".codePointAt(0))],
+			GetText() { return "legacy-wrapper-field"; }
+		},
+		expected: "f"
+	},
+	{
+		node: {
+			constructor: {name: "FldSimple"},
+			Content: [textNode("g".codePointAt(0))],
+			GetText() { return "legacy-wrapper-fldsimple"; }
+		},
+		expected: "g"
+	},
+	{
+		node: {
+			constructor: {name: "CInlineLevelSdt"},
+			Content: [textNode("s".codePointAt(0))],
+			GetText() { return "legacy-wrapper-inline-sdt"; }
+		},
+		expected: "s"
+	},
+	{
+		node: {
+			constructor: {name: "CBlockLevelSdt"},
+			GetContent() {
+				return {
+					Content: [textNode("b".codePointAt(0))]
+				};
+			},
+			GetText() { return "legacy-wrapper-block-sdt"; }
+		},
+		expected: "b"
+	}
+].forEach(({node, expected}) => {
+	assert.strictEqual(global.AscMath.ExportToLaTeX(node, {
+		mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	}), expected);
+});
+
+const previousMathSettingsGetter = global.Get_WordDocumentDefaultMathSettings;
+global.Get_WordDocumentDefaultMathSettings = function () {
+	return {
+		GetPr() {
+			return {
+				defJc: 1,
+				smallFrac: true,
+				wrapRight: true,
+				wrapIndent: 25,
+				lMargin: 10,
+				rMargin: 20,
+			};
+		}
+	};
+};
+
+const paraMathValidation = global.AscMath.CreateLaTeXExportValidation();
+const paraMathOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "ParaMath"},
+	Jc: 2,
+	Root: textNode("x".codePointAt(0)),
+	GetText() { return "legacy-para-math"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: paraMathValidation,
+});
+assert.strictEqual(paraMathOutput, "x");
+assert.ok(paraMathValidation.droppedProperties.includes("ParaMath.Jc"));
+assert.ok(paraMathValidation.droppedProperties.includes("MathPr.defJc"));
+assert.ok(paraMathValidation.droppedProperties.includes("MathPr.smallFrac"));
+assert.ok(paraMathValidation.droppedProperties.includes("MathPr.wrapRight"));
+assert.ok(paraMathValidation.droppedProperties.includes("MathPr.wrapIndent"));
+assert.ok(paraMathValidation.droppedProperties.includes("MathPr.lMargin"));
+assert.ok(paraMathValidation.droppedProperties.includes("MathPr.rMargin"));
+
+global.Get_WordDocumentDefaultMathSettings = previousMathSettingsGetter;
 
 console.log("strict export scaffold smoke tests: ok");

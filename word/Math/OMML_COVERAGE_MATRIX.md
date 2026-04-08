@@ -69,22 +69,22 @@ The target state is:
 | `nor` | `approximated` | Surfaced as `ParaRun.MathPrp.nor` |
 | `scr` | `normalized` | Lowered to math alphabet wrappers |
 | `sty` | `normalized` | Lowered to math alphabet wrappers |
-| `brk` | `not-started` | Manual-break handling inside run not fully specified in exporter |
-| `aln` | `classified-only` | Alignment-point support exists via `CMathAmp.alignPoint`; broader run alignment path incomplete |
+| `brk` | `classified-only` | Surfaced as `ParaRun.MathPrp.brk` |
+| `aln` | `classified-only` | Surfaced as `ParaRun.MathPrp.aln`; dedicated align-point lowering exists via `CMathAmp.alignPoint` |
 
 ### `CT_AccPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
 | `chr` | `normalized` | Accent mapping exists |
-| `ctrlPr` | `not-started` | No explicit export policy beyond inherited run behavior |
+| `ctrlPr` | `classified-only` | Surfaced as `CAccent.ctrlPr` |
 
 ### `CT_BarPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
 | `pos` | `normalized` | Lowered to `\overline` / `\underline` |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CBar.ctrlPr` |
 
 ### `CT_BoxPr`
 
@@ -94,8 +94,8 @@ The target state is:
 | `noBreak` | `classified-only` | Surfaced as `CBox.noBreak` |
 | `diff` | `classified-only` | Surfaced as `CBox.diff` |
 | `brk` | `classified-only` | Surfaced as `CBox.brk` |
-| `aln` | `not-started` | No explicit export policy |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `aln` | `classified-only` | Surfaced as `CBox.aln` |
+| `ctrlPr` | `classified-only` | Surfaced as `CBox.ctrlPr` |
 
 ### `CT_BorderBoxPr`
 
@@ -109,7 +109,7 @@ The target state is:
 | `strikeV` | `approximated` | Classified as orthogonal strike approximation |
 | `strikeBLTR` | `approximated` | Better with `cancel` package where available |
 | `strikeTLBR` | `approximated` | Better with `cancel` package where available |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CBorderBox.ctrlPr` |
 
 ### `CT_DPr`
 
@@ -118,9 +118,9 @@ The target state is:
 | `begChr` | `normalized` | Lowered |
 | `sepChr` | `normalized` | Lowered as `\mid` for multi-content case |
 | `endChr` | `normalized` | Lowered |
-| `grow` | `not-started` | No explicit validation or policy |
-| `shp` | `not-started` | No explicit validation or policy |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `grow` | `approximated` | Surfaced as `CDelimiter.grow` |
+| `shp` | `approximated` | Surfaced as `CDelimiter.shp` |
+| `ctrlPr` | `classified-only` | Surfaced as `CDelimiter.ctrlPr` |
 
 ### `CT_EqArrPr`
 
@@ -129,9 +129,9 @@ The target state is:
 | `baseJc` | `approximated` | Surfaced as `CEqArray.baseJc` |
 | `maxDist` | `classified-only` | Surfaced as `CEqArray.maxDist` |
 | `objDist` | `classified-only` | Surfaced as `CEqArray.objDist` |
-| `rSpRule` | `not-started` | No explicit export policy |
-| `rSp` | `not-started` | No explicit export policy |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `rSpRule` | `approximated` | Surfaced as `CEqArray.rSpRule` |
+| `rSp` | `approximated` | Surfaced as `CEqArray.rSp` |
+| `ctrlPr` | `classified-only` | Surfaced as `CEqArray.ctrlPr` |
 
 ### `CT_FPr`
 
@@ -141,13 +141,13 @@ The target state is:
 | `type=noBar` | `normalized` | Lowered to binomial form |
 | `type=skw` | `approximated` | Surfaced as `CFraction.skewed` |
 | `type=lin` | `approximated` | Surfaced as `CFraction.linear` |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CFraction.ctrlPr` |
 
 ### `CT_FuncPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CMathFunc.ctrlPr` |
 
 ### `CT_GroupChrPr`
 
@@ -156,13 +156,13 @@ The target state is:
 | `chr` | `normalized` | Core lowering exists |
 | `pos` | `normalized` | Above/below distinction works |
 | `vertJc` | `classified-only` | Surfaced as `CGroupCharacter.vertJc` |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CGroupCharacter.ctrlPr` |
 
 ### `CT_LimLowPr` / `CT_LimUppPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CLimit.ctrlPr` |
 
 ### `CT_MPr`
 
@@ -170,49 +170,49 @@ The target state is:
 | --- | --- | --- |
 | `baseJc` | `approximated` | Surfaced as `CMathMatrix.baseJc` |
 | `plcHide` | `approximated` | Surfaced as `CMathMatrix.plcHide` |
-| `rSpRule` | `not-started` | No explicit export policy |
-| `cGpRule` | `not-started` | No explicit export policy |
+| `rSpRule` | `approximated` | Surfaced as `CMathMatrix.rSpRule` |
+| `cGpRule` | `approximated` | Surfaced as `CMathMatrix.cGpRule` |
 | `rSp` | `approximated` | Spacing heuristics partial |
 | `cSp` | `approximated` | Spacing heuristics partial |
 | `cGp` | `approximated` | Spacing heuristics partial |
 | `mcs` | `approximated` | Column alignment partial |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CMathMatrix.ctrlPr` |
 
 ### `CT_NaryPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
 | `chr` | `normalized` | Core operator mapping exists |
-| `limLoc` | `normalized` | `\limits` / `\nolimits` |
+| `limLoc` | `normalized` | Explicit `limLoc` plus document-default `intLim` / `naryLim` |
 | `grow` | `approximated` | Surfaced as `CNary.grow` |
 | `subHide` | `approximated` | Surfaced as `CNary.subHide` |
 | `supHide` | `approximated` | Surfaced as `CNary.supHide` |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CNary.ctrlPr` |
 
 ### `CT_PhantPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
-| `show` | `not-started` | No explicit export policy |
+| `show` | `exact` | Visible phantoms pass through; hidden phantoms lower structurally |
 | `zeroWid` | `implemented` | Via `\vphantom` path where applicable |
 | `zeroAsc` | `approximated` | Partial-height semantics not exact |
 | `zeroDesc` | `approximated` | Partial-height semantics not exact |
 | `transp` | `implemented` | Surfaced as `CPhantom.transp` |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CPhantom.ctrlPr` |
 
 ### `CT_RadPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
 | `degHide` | `approximated` | Surfaced as `CRadical.degHide` |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CRadical.ctrlPr` |
 
 ### `CT_SSubSupPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
 | `alnScr` | `classified-only` | Surfaced as `CDegreeSubSup.alnScr` |
-| `ctrlPr` | `not-started` | No explicit export policy |
+| `ctrlPr` | `classified-only` | Surfaced as `CDegreeSubSup.ctrlPr` |
 
 ### `CT_OMathArgPr`
 
@@ -224,28 +224,28 @@ The target state is:
 
 | Property | Current status | Notes |
 | --- | --- | --- |
-| `jc` | `not-started` | Display-math paragraph alignment policy still missing |
+| `jc` | `classified-only` | Surfaced as `ParaMath.Jc` while portable alignment policy remains unresolved |
 
 ### `CT_MathPr`
 
 | Property | Current status | Notes |
 | --- | --- | --- |
-| `mathFont` | `not-started` | Needs explicit portability policy |
-| `brkBin` | `not-started` | Needs explicit line-break policy |
-| `brkBinSub` | `not-started` | Needs explicit line-break policy |
-| `smallFrac` | `not-started` | Needs explicit policy |
-| `dispDef` | `not-started` | Needs explicit display-policy handling |
-| `lMargin` | `not-started` | Likely approximated or dropped |
-| `rMargin` | `not-started` | Likely approximated or dropped |
-| `defJc` | `not-started` | Needs explicit display alignment policy |
-| `preSp` | `not-started` | Needs explicit spacing policy |
-| `postSp` | `not-started` | Needs explicit spacing policy |
-| `interSp` | `not-started` | Needs explicit spacing policy |
-| `intraSp` | `not-started` | Needs explicit spacing policy |
-| `wrapIndent` | `not-started` | Needs explicit wrap policy |
-| `wrapRight` | `not-started` | Needs explicit wrap policy |
-| `intLim` | `not-started` | Could influence default limit placement policy |
-| `naryLim` | `not-started` | Could influence default n-ary placement policy |
+| `mathFont` | `classified-only` | Surfaced as `MathPr.mathFont` |
+| `brkBin` | `classified-only` | Surfaced as `MathPr.brkBin` |
+| `brkBinSub` | `classified-only` | Surfaced as `MathPr.brkBinSub` |
+| `smallFrac` | `classified-only` | Surfaced as `MathPr.smallFrac` |
+| `dispDef` | `classified-only` | Surfaced as `MathPr.dispDef` |
+| `lMargin` | `classified-only` | Surfaced as `MathPr.lMargin` |
+| `rMargin` | `classified-only` | Surfaced as `MathPr.rMargin` |
+| `defJc` | `classified-only` | Surfaced as `MathPr.defJc` |
+| `preSp` | `classified-only` | Surfaced as `MathPr.preSp` |
+| `postSp` | `classified-only` | Surfaced as `MathPr.postSp` |
+| `interSp` | `classified-only` | Surfaced as `MathPr.interSp` |
+| `intraSp` | `classified-only` | Surfaced as `MathPr.intraSp` |
+| `wrapIndent` | `classified-only` | Surfaced as `MathPr.wrapIndent` |
+| `wrapRight` | `classified-only` | Surfaced as `MathPr.wrapRight` |
+| `intLim` | `normalized` | Applied as the document-default integral limit policy |
+| `naryLim` | `normalized` | Applied as the document-default non-integral limit policy |
 
 ## Embedded Word Content Inside Math
 
@@ -258,12 +258,12 @@ Schema references:
 
 Current status:
 
-- `customXml` -> `not-started`
-- `fldSimple` -> `not-started`
-- `hyperlink` -> `not-started`
-- `smartTag` -> `not-started`
-- `sdt` -> `not-started`
-- run-level wrapper markup inside math -> `not-started`
+- `customXml` -> `classified-only`
+- `fldSimple` -> `normalized`
+- `hyperlink` -> `normalized`
+- `smartTag` -> `unsupported`
+- `sdt` -> `normalized`
+- run-level wrapper markup inside math -> `normalized`
 
 Requirement:
 
@@ -276,7 +276,7 @@ These are not schema rows, but they block completion claims.
 
 | Area | Current status | Notes |
 | --- | --- | --- |
-| Generic fallback removal for valid OMML | `not-started` | Still required as end-state criterion |
+| Generic fallback removal for valid OMML | `complete` | Canonical OMML rows and schema-legal transparent wrappers have explicit handling; remaining fallback is treated as invalid-source or non-OMML |
 | Full HTML serialization of strict metadata | `partial` | Improved, but must stay complete for all new classifications |
 | Renderer violation policy for placeholder leakage | `partial` | Needed for invalid-source separation |
 | Unsupported vs approximated distinction for all properties | `partial` | Matrix must drive this consistently |

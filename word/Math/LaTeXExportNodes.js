@@ -340,8 +340,101 @@
 		return result;
 	}
 
+	function GetDocumentMathSettingsProperties()
+	{
+		let settings;
+
+		if (typeof Get_WordDocumentDefaultMathSettings !== "function")
+			return null;
+
+		settings = Get_WordDocumentDefaultMathSettings();
+		if (!settings || typeof settings.GetPr !== "function")
+			return null;
+
+		return settings.GetPr();
+	}
+
+	function HasDefinedValue(value)
+	{
+		return value !== null && typeof value !== "undefined";
+	}
+
+	function TrackCtrlPrProperty(pr, context, propertyName)
+	{
+		let rPr;
+
+		if (!context || !context.validation || !pr || typeof pr.GetRPr !== "function")
+			return;
+
+		rPr = pr.GetRPr();
+		if (!rPr)
+			return;
+
+		if (typeof rPr.Is_Empty === "function")
+		{
+			if (!rPr.Is_Empty())
+				PushValidationEntry(context.validation.droppedProperties, propertyName);
+			return;
+		}
+
+		if (typeof rPr.IsEmpty === "function")
+		{
+			if (!rPr.IsEmpty())
+				PushValidationEntry(context.validation.droppedProperties, propertyName);
+			return;
+		}
+
+		if (Object.keys(rPr).length > 0)
+			PushValidationEntry(context.validation.droppedProperties, propertyName);
+	}
+
+	function TrackParaMathProperties(node, context)
+	{
+		let settingsPr;
+
+		if (!context || !context.validation || !node)
+			return;
+
+		if (typeof node.Jc !== "undefined")
+			PushValidationEntry(context.validation.droppedProperties, "ParaMath.Jc");
+
+		settingsPr = GetDocumentMathSettingsProperties();
+		if (!settingsPr)
+			return;
+
+		if (HasDefinedValue(settingsPr.mathFont))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.mathFont");
+		if (HasDefinedValue(settingsPr.brkBin))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.brkBin");
+		if (HasDefinedValue(settingsPr.brkBinSub))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.brkBinSub");
+		if (HasDefinedValue(settingsPr.smallFrac))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.smallFrac");
+		if (HasDefinedValue(settingsPr.dispDef))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.dispDef");
+		if (HasDefinedValue(settingsPr.lMargin))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.lMargin");
+		if (HasDefinedValue(settingsPr.rMargin))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.rMargin");
+		if (HasDefinedValue(settingsPr.defJc))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.defJc");
+		if (HasDefinedValue(settingsPr.preSp))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.preSp");
+		if (HasDefinedValue(settingsPr.postSp))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.postSp");
+		if (HasDefinedValue(settingsPr.interSp))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.interSp");
+		if (HasDefinedValue(settingsPr.intraSp))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.intraSp");
+		if (HasDefinedValue(settingsPr.wrapIndent))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.wrapIndent");
+		if (HasDefinedValue(settingsPr.wrapRight))
+			PushValidationEntry(context.validation.droppedProperties, "MathPr.wrapRight");
+	}
+
 	function ExportParaMath(node, context)
 	{
+		TrackParaMathProperties(node, context);
 		return AscMath.ExportNodeToLaTeXTokens(node.Root, context);
 	}
 
@@ -371,6 +464,48 @@
 
 		for (let index = 0; index < node.Content.length; index++)
 			result = result.concat(AscMath.ExportNodeToLaTeXTokens(node.Content[index], context));
+
+		return result;
+	}
+
+	function GetNodeChildSequence(node)
+	{
+		let content;
+		let result = [];
+		let index;
+
+		if (!node)
+			return result;
+
+		if (Array.isArray(node.Content))
+			return node.Content;
+
+		if (typeof node.GetContent === "function")
+		{
+			content = node.GetContent();
+			if (Array.isArray(content))
+				return content;
+			if (content && Array.isArray(content.Content))
+				return content.Content;
+			if (content && typeof content.GetElementsCount === "function" && typeof content.GetElement === "function")
+			{
+				for (index = 0; index < content.GetElementsCount(); index += 1)
+					result.push(content.GetElement(index));
+				return result;
+			}
+		}
+
+		return result;
+	}
+
+	function ExportTransparentContainer(node, context)
+	{
+		let children = GetNodeChildSequence(node);
+		let result = [];
+		let index;
+
+		for (index = 0; index < children.length; index += 1)
+			result = result.concat(AscMath.ExportNodeToLaTeXTokens(children[index], context));
 
 		return result;
 	}
@@ -439,6 +574,11 @@
 				PushValidationEntry(context.validation.approximatedProperties, "ParaRun.MathPrp.lit");
 			return ["\\mathrm"];
 		}
+
+		if (node && node.MathPrp && typeof node.MathPrp.aln !== "undefined" && context && context.validation)
+			PushValidationEntry(context.validation.approximatedProperties, "ParaRun.MathPrp.aln");
+		if (node && node.MathPrp && typeof node.MathPrp.brk !== "undefined" && context && context.validation)
+			PushValidationEntry(context.validation.droppedProperties, "ParaRun.MathPrp.brk");
 
 		if (typeof TXT_ROMAN !== "undefined" && scr === TXT_ROMAN)
 		{
@@ -699,6 +839,8 @@
 		let denominator = AscMath.ExportNodeToLaTeXTokens(node.getDenominator(), context);
 		let command = "\\frac";
 
+		TrackCtrlPrProperty(node.Pr, context, "CFraction.ctrlPr");
+
 		if (typeof NO_BAR_FRACTION !== "undefined" && node.Pr.type === NO_BAR_FRACTION)
 			command = "\\binom";
 		else if (typeof BAR_FRACTION !== "undefined" && node.Pr.type === BAR_FRACTION)
@@ -721,6 +863,7 @@
 
 	function ExportDegree(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CDegree.ctrlPr");
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let iterator = AscMath.ExportNodeToLaTeXTokens(node.getIterator(), context);
 		let scriptOpen = node.Pr.type === 1 ? token(K.SupOpen, "^{") : token(K.SubOpen, "_{");
@@ -730,6 +873,7 @@
 
 	function ExportDegreeSubSup(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CDegreeSubSup.ctrlPr");
 		if (node.Pr && node.Pr.alnScr && context && context.validation)
 			PushValidationEntry(context.validation.approximatedProperties, "CDegreeSubSup.alnScr");
 
@@ -765,6 +909,7 @@
 
 	function ExportRadical(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CRadical.ctrlPr");
 		let degree = [];
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let result = [token(K.Command, "\\sqrt")];
@@ -820,6 +965,8 @@
 			token(K.Raw, NormalizeDelimiterSymbol(start, "left")),
 		];
 
+		TrackCtrlPrProperty(node.Pr, context, "CDelimiter.ctrlPr");
+
 		for (let i = 0; i < contentCount; i++)
 		{
 			result = result.concat(AscMath.ExportNodeToLaTeXTokens(node.Content[i], context));
@@ -828,13 +975,34 @@
 				result.push(token(K.Command, "\\mid"));
 		}
 
+		if (context && context.validation && node.Pr)
+		{
+			if (HasDefinedValue(node.Pr.grow))
+				PushValidationEntry(context.validation.approximatedProperties, "CDelimiter.grow");
+			if (HasDefinedValue(node.Pr.shp))
+				PushValidationEntry(context.validation.approximatedProperties, "CDelimiter.shp");
+		}
+
 		result.push(token(K.Command, "\\right"));
 		result.push(token(K.Raw, NormalizeDelimiterSymbol(end, "right")));
 		return result;
 	}
 
+	function ResolveDefaultNaryLimitLocation(node)
+	{
+		let settingsPr = GetDocumentMathSettingsProperties();
+		let chr = node && node.Pr ? node.Pr.chr : undefined;
+		let isIntegral = (chr > 0x222A && chr < 0x2231) || chr === null || typeof chr === "undefined";
+
+		if (!settingsPr)
+			return null;
+
+		return isIntegral ? settingsPr.intLim : settingsPr.naryLim;
+	}
+
 	function ExportLimit(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CLimit.ctrlPr");
 		let funcName = AscMath.ExportNodeToLaTeXTokens(node.getFName(), context);
 		let iterator = AscMath.ExportNodeToLaTeXTokens(node.getIterator(), context);
 		let needsMathOpWrapper = true;
@@ -867,6 +1035,7 @@
 
 	function ExportMathFunction(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CMathFunc.ctrlPr");
 		let funcNameNode = node.getFName();
 		let argumentNode = node.getArgument();
 		let funcTokens = AscMath.ExportNodeToLaTeXTokens(funcNameNode, context);
@@ -903,8 +1072,11 @@
 		let lower = [];
 		let upper = [];
 		let base = node.getBase ? AscMath.ExportNodeToLaTeXTokens(node.getBase(), context) : [];
+		let limLoc = node.Pr ? node.Pr.limLoc : undefined;
 		let unicodeSymbol;
 		let result;
+
+		TrackCtrlPrProperty(node.Pr, context, "CNary.ctrlPr");
 
 		if (AscMath.MathLiterals
 			&& AscMath.MathLiterals.nary
@@ -925,10 +1097,22 @@
 		else if (node.Pr && node.Pr.supHide && context && context.validation)
 			PushValidationEntry(context.validation.approximatedProperties, "CNary.supHide");
 
+		if (!HasDefinedValue(limLoc))
+		{
+			limLoc = ResolveDefaultNaryLimitLocation(node);
+			if (HasDefinedValue(limLoc) && context && context.validation)
+			{
+				if (command === "\\int")
+					PushValidationEntry(context.validation.implementedProperties, "MathPr.intLim");
+				else
+					PushValidationEntry(context.validation.implementedProperties, "MathPr.naryLim");
+			}
+		}
+
 		result = [token(K.Command, command)];
-		if (node.Pr && node.Pr.limLoc === NARY_UndOvr)
+		if (limLoc === NARY_UndOvr)
 			result.push(token(K.Command, "\\limits"));
-		else if (node.Pr && node.Pr.limLoc === NARY_SubSup)
+		else if (limLoc === NARY_SubSup)
 			result.push(token(K.Command, "\\nolimits"));
 
 		if (node.Pr && typeof node.Pr.grow !== "undefined" && context && context.validation)
@@ -966,6 +1150,7 @@
 
 	function ExportAccent(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CAccent.ctrlPr");
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let command = ResolveAccentCommand(node);
 
@@ -977,6 +1162,7 @@
 
 	function ExportBorderBox(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CBorderBox.ctrlPr");
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let pr = node.Pr || {};
 		let result = base;
@@ -1065,6 +1251,8 @@
 	{
 		let pr = node.Pr || {};
 
+		TrackCtrlPrProperty(pr, context, "CBox.ctrlPr");
+
 		if (context && context.validation)
 		{
 			if (pr.opEmu)
@@ -1073,6 +1261,8 @@
 				PushValidationEntry(context.validation.approximatedProperties, "CBox.noBreak");
 			if (pr.diff)
 				PushValidationEntry(context.validation.approximatedProperties, "CBox.diff");
+			if (typeof pr.aln !== "undefined")
+				PushValidationEntry(context.validation.approximatedProperties, "CBox.aln");
 			if (pr.brk)
 				PushValidationEntry(context.validation.approximatedProperties, "CBox.brk");
 		}
@@ -1082,6 +1272,7 @@
 
 	function ExportBar(node, context)
 	{
+		TrackCtrlPrProperty(node.Pr, context, "CBar.ctrlPr");
 		return WrapCommandArgument(node.Pr.pos ? "\\underline" : "\\overline", AscMath.ExportNodeToLaTeXTokens(node.getBase(), context));
 	}
 
@@ -1091,6 +1282,16 @@
 		let command = "\\phantom";
 		let pr = node.Pr || {};
 		let zeroHeight = !!(pr.zeroAsc || pr.zeroDesc);
+
+		TrackCtrlPrProperty(pr, context, "CPhantom.ctrlPr");
+
+		if (HasDefinedValue(pr.show))
+		{
+			if (context && context.validation)
+				PushValidationEntry(context.validation.implementedProperties, "CPhantom.show");
+			if (pr.show)
+				return base;
+		}
 
 		if (pr.zeroWid && !zeroHeight)
 		{
@@ -1330,6 +1531,8 @@
 			&& node.Pr
 			&& (node.Pr.cGp || node.Pr.cSp || node.Pr.rSp));
 
+		TrackCtrlPrProperty(node.Pr, context, "CMathMatrix.ctrlPr");
+
 		for (rowIndex = 0; rowIndex < node.getRowsCount(); rowIndex += 1)
 		{
 			rows[rowIndex] = [];
@@ -1342,6 +1545,14 @@
 
 		if (context)
 			context.matrixRowSpacingLength = useSpacingHeuristics ? GetApproximateMatrixLength(node.Pr && node.Pr.rSp) : "";
+
+		if (context && context.validation && node.Pr)
+		{
+			if (HasDefinedValue(node.Pr.cGpRule))
+				PushValidationEntry(context.validation.approximatedProperties, "CMathMatrix.cGpRule");
+			if (HasDefinedValue(node.Pr.rSpRule))
+				PushValidationEntry(context.validation.approximatedProperties, "CMathMatrix.rSpRule");
+		}
 
 		if (IsCenteredColumnSpec(columnSpec) && !useSpacingHeuristics)
 			return ExportMatrixEnvironment(environmentName, rows, context);
@@ -1388,6 +1599,8 @@
 		let rowTokens;
 		let eqnoSplit;
 
+		TrackCtrlPrProperty(node.Pr, context, "CEqArray.ctrlPr");
+
 		for (rowIndex = 0; rowIndex < node.Pr.row; rowIndex += 1)
 		{
 			rowTokens = AscMath.ExportNodeToLaTeXTokens(node.getElement(rowIndex), context);
@@ -1421,6 +1634,10 @@
 				PushValidationEntry(context.validation.approximatedProperties, "CEqArray.maxDist");
 			if (node.Pr.objDist)
 				PushValidationEntry(context.validation.approximatedProperties, "CEqArray.objDist");
+			if (HasDefinedValue(node.Pr.rSpRule))
+				PushValidationEntry(context.validation.approximatedProperties, "CEqArray.rSpRule");
+			if (node.Pr.rSp)
+				PushValidationEntry(context.validation.approximatedProperties, "CEqArray.rSp");
 		}
 
 		if (hasEqno)
@@ -1447,6 +1664,8 @@
 			&& AscMath.MathLiterals.hbrack
 			&& typeof AscMath.MathLiterals.hbrack.SearchU === "function"
 			&& AscMath.MathLiterals.hbrack.SearchU(symbol));
+
+		TrackCtrlPrProperty(node.Pr, context, "CGroupCharacter.ctrlPr");
 
 		if (isHorizontalBracket)
 		{
@@ -1522,6 +1741,13 @@
 	RegisterNode("ParaRun", ExportParaRun, [
 		typeof para_Math_Run !== "undefined" ? {type: para_Math_Run} : null,
 	]);
+	RegisterNode("ParaHyperlink", ExportTransparentContainer);
+	RegisterNode("ParaField", ExportTransparentContainer);
+	RegisterNode("FldSimple", ExportTransparentContainer);
+	RegisterNode("CInlineLevelSdt", ExportTransparentContainer);
+	RegisterNode("InlineLevelSdt", ExportTransparentContainer);
+	RegisterNode("CBlockLevelSdt", ExportTransparentContainer);
+	RegisterNode("BlockLevelSdt", ExportTransparentContainer);
 	RegisterNode("CFraction", ExportFraction, [
 		typeof MATH_FRACTION !== "undefined" ? {kind: MATH_FRACTION} : null,
 		typeof AscDFH !== "undefined" && typeof AscDFH.historyitem_type_frac !== "undefined" ? {classType: AscDFH.historyitem_type_frac} : null,
