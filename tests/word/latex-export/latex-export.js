@@ -176,6 +176,53 @@ $(function () {
 			),
 			"\\cdot"
 		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("≔", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			":="
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("½", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\frac{1}{2}"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("µ", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\mu"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("ℎ", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"h"
+		);
+	});
+
+	QUnit.test("strict symbol export classifies placeholder glyphs as renderer violations", function (assert) {
+		let validation = AscMath.CreateLaTeXExportValidation();
+		let context = AscMath.CreateLaTeXExportContext({validation: validation});
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("⬚", context),
+				context
+			),
+			""
+		);
+		assert.deepEqual(validation.unknownSymbols, [], "placeholder glyph is not treated as an unknown symbol");
+		assert.deepEqual(validation.rendererViolations, ["placeholder-symbol:U+2B1A"], "placeholder glyph is recorded as a renderer violation");
 	});
 
 	QUnit.test("strict export lowers horizontal group characters as operators with limits", function (assert) {

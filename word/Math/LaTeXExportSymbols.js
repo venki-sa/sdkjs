@@ -44,6 +44,7 @@
 
 	const ExplicitSymbols = {
 		"℃": {kind: "structural"},
+		"½": {kind: "structural"},
 		"⁡": {kind: "invisible"},
 		" ": {kind: "raw", value: "\\ "},
 		"\t": {kind: "raw", value: "\\ "},
@@ -54,6 +55,9 @@
 		"（": {kind: "raw", value: "("},
 		"）": {kind: "raw", value: ")"},
 		"·": {kind: "command", value: "\\cdot"},
+		"µ": {kind: "command", value: "\\mu"},
+		"ℎ": {kind: "identifier", value: "h"},
+		"≔": {kind: "raw", value: ":="},
 		"{": {kind: "raw", value: "\\{"},
 		"}": {kind: "raw", value: "\\}"},
 		"#": {kind: "raw", value: "\\#"},
@@ -62,6 +66,10 @@
 		"_": {kind: "raw", value: "\\_"},
 		"−": {kind: "raw", value: "-"},
 		"–": {kind: "raw", value: "-"},
+	};
+	const InvalidPlaceholderSymbols = {
+		"⬚": true,
+		"\uFFFC": true,
 	};
 
 	function GetCodePointString(value)
@@ -88,13 +96,46 @@
 			];
 		}
 
+		if (symbol === "½")
+		{
+			return [
+				token(K.Command, "\\frac"),
+				token(K.GroupOpen, "{"),
+				token(K.Number, "1"),
+				token(K.GroupClose, "}"),
+				token(K.GroupOpen, "{"),
+				token(K.Number, "2"),
+				token(K.GroupClose, "}"),
+			];
+		}
+
 		return [token(K.Raw, symbol)];
+	}
+
+	function GetSymbolCodePointLabel(symbol)
+	{
+		if (!symbol)
+			return "";
+
+		const codePoint = symbol.codePointAt(0);
+		return "U+" + codePoint.toString(16).toUpperCase();
+	}
+
+	function HandleInvalidPlaceholderSymbol(symbol, context)
+	{
+		if (context && context.validation)
+			context.validation.rendererViolations.push("placeholder-symbol:" + GetSymbolCodePointLabel(symbol));
+
+		return [];
 	}
 
 	function ExportSymbolToLaTeXTokens(symbol, context)
 	{
 		if (!symbol)
 			return [];
+
+		if (InvalidPlaceholderSymbols[symbol])
+			return HandleInvalidPlaceholderSymbol(symbol, context);
 
 		const explicit = ExplicitSymbols[symbol];
 		if (explicit)
@@ -107,6 +148,9 @@
 
 			if (explicit.kind === "command")
 				return [token(K.Command, explicit.value, "symbol:" + symbol)];
+
+			if (explicit.kind === "identifier")
+				return [token(K.Identifier, explicit.value, "symbol:" + symbol)];
 
 			return [token(K.Raw, explicit.value, "symbol:" + symbol)];
 		}

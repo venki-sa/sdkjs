@@ -264,6 +264,40 @@ const middleDotOutput = global.AscMath.RenderLaTeXExportTokens(
 );
 assert.strictEqual(middleDotOutput, "\\cdot");
 
+const assignmentRelationOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("≔", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(assignmentRelationOutput, ":=");
+
+const vulgarHalfOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("½", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(vulgarHalfOutput, "\\frac{1}{2}");
+
+const microSignOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("µ", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(microSignOutput, "\\mu");
+
+const planckStyleHOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("ℎ", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(planckStyleHOutput, "h");
+
+const placeholderValidation = global.AscMath.CreateLaTeXExportValidation();
+const placeholderContext = global.AscMath.CreateLaTeXExportContext({validation: placeholderValidation});
+const placeholderOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("⬚", placeholderContext),
+	placeholderContext
+);
+assert.strictEqual(placeholderOutput, "");
+assert.deepStrictEqual(placeholderValidation.unknownSymbols, []);
+assert.deepStrictEqual(placeholderValidation.rendererViolations, ["placeholder-symbol:U+2B1A"]);
+
 global.AscMath.RegisterLaTeXExportNode("FakeLeaf", function (node) {
 	return [token(K.Identifier, node.value)];
 });
