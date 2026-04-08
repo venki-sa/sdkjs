@@ -55,6 +55,14 @@ $(function () {
 		sectPr.SetPageSize(PAGE_W, 1000);
 		sectPr.SetPageMargins(L_FIELD, 50, R_FIELD, 50);
 	}
+	function resetStrictExportState() {
+		if (!window.AscMath)
+			return;
+
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Legacy);
+		AscMath.SetLaTeXExportFallbackPolicy(AscMath.c_oAscLaTeXExportFallbackPolicy.Legacy);
+		AscMath.ResetLaTeXExportRegistry();
+	}
 	const oldPrepeare_recursive = AscCommon.PasteProcessor.prototype._Prepeare_recursive;
 
 	AscCommon.PasteProcessor.prototype._Prepeare_recursive = function () {};
@@ -2682,6 +2690,42 @@ $(function () {
 	// 	);
 	// 	done();
 	// });
+
+	QUnit.test("Copy math html emits full strict fallback metadata", function (assert) {
+		initDocument();
+		resetStrictExportState();
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+
+		let oCopyProcessor = new AscCommon.CopyProcessor(AscTest.Editor);
+		let fakeMath = {
+			Type: para_Math,
+			GetText: function () {
+				return "legacy-fallback";
+			},
+			GetLaTeXText: function (options) {
+				options.validation.unknownNodes.push("unknown-node");
+				options.validation.unknownSymbols.push("−");
+				options.validation.forbiddenAliases.push("\\funcapply");
+				options.validation.rendererViolations.push("placeholder-box");
+				options.validation.fallbacks.push("kind:6");
+				return "\\alpha";
+			}
+		};
+
+		oCopyProcessor.CopyRunContent({Content: [fakeMath]}, oCopyProcessor.oRoot, false);
+
+		let copiedHtml = oCopyProcessor.getInnerHtml();
+		assert.ok(copiedHtml.indexOf('data-latex-mode="strict"') !== -1, "strict mode attribute is emitted");
+		assert.ok(copiedHtml.indexOf('data-latex-strict-fidelity="fallback"') !== -1, "fallback fidelity is emitted");
+		assert.ok(copiedHtml.indexOf('data-latex-strict-fallbacks="kind:6"') !== -1, "fallback reasons are emitted");
+		assert.ok(copiedHtml.indexOf('data-latex-strict-unknown-nodes="unknown-node"') !== -1, "unknown node metadata is emitted");
+		assert.ok(copiedHtml.indexOf('data-latex-strict-unknown-symbols="−"') !== -1, "unknown symbol metadata is emitted");
+		assert.ok(copiedHtml.indexOf('data-latex-strict-forbidden-aliases="\\funcapply"') !== -1, "forbidden alias metadata is emitted");
+		assert.ok(copiedHtml.indexOf('data-latex-strict-renderer-violations="placeholder-box"') !== -1, "renderer violation metadata is emitted");
+		assert.ok(copiedHtml.indexOf('data-latex-strict-has-fallback="true"') !== -1, "fallback marker is emitted for fallback-class validation");
+
+		resetStrictExportState();
+	});
 
 	QUnit.module("Word Copy/Paste Tests");
 });

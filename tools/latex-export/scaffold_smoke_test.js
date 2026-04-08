@@ -47,6 +47,7 @@ global.MATH_PHANTOM = 0x1013;
 global.MATH_MATRIX = 0x1014;
 global.MATH_EQ_ARRAY = 0x1015;
 global.MATH_GROUP_CHARACTER = 0x1016;
+global.DEGREE_PreSubSup = -1;
 global.AscDFH = {
 	historyitem_type_MathContent: 0x2001,
 	historyitem_type_frac: 0x2002,
@@ -221,6 +222,128 @@ const invisibleOutput = global.AscMath.RenderLaTeXExportTokens(
 );
 assert.strictEqual(invisibleOutput, "");
 
+const unicodeMinusOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("−", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(unicodeMinusOutput, "-");
+
+const enDashOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("–", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(enDashOutput, "-");
+
+const figureSpaceOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("\u2008", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(figureSpaceOutput, "\\ ");
+
+const thinSpaceOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("\u2009", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(thinSpaceOutput, "\\,");
+
+global.AscMath.RegisterLaTeXExportNode("FakeLeaf", function (node) {
+	return [token(K.Identifier, node.value)];
+});
+global.AscMath.SymbolsToLaTeX = Object.assign({}, global.AscMath.SymbolsToLaTeX, {
+	"→": "\\to",
+	"⏞": "\\overbrace",
+});
+
+const groupCharacterOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CGroupCharacter"},
+	Pr: {
+		chr: "→".codePointAt(0),
+		pos: 1,
+	},
+	getBase() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "x",
+		};
+	},
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+});
+assert.strictEqual(groupCharacterOutput, "\\mathop{\\to}\\limits^{x}");
+
+const overbraceOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CGroupCharacter"},
+	Pr: {
+		chr: "⏞".codePointAt(0),
+		pos: 1,
+	},
+	getBase() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "x",
+		};
+	},
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+});
+assert.strictEqual(overbraceOutput, "\\overbrace{x}");
+
+const preSubSupLowerOnlyOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegreeSubSup"},
+	Pr: {
+		type: global.DEGREE_PreSubSup,
+	},
+	getBase() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "D",
+		};
+	},
+	getLowerIterator() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "q",
+		};
+	},
+	getUpperIterator() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "",
+		};
+	},
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+});
+assert.strictEqual(preSubSupLowerOnlyOutput, "{}_{q}D");
+
+const preSubSupUpperOnlyOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegreeSubSup"},
+	Pr: {
+		type: global.DEGREE_PreSubSup,
+	},
+	getBase() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "K",
+		};
+	},
+	getLowerIterator() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "",
+		};
+	},
+	getUpperIterator() {
+		return {
+			constructor: {name: "FakeLeaf"},
+			value: "L",
+		};
+	},
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+});
+assert.strictEqual(preSubSupUpperOnlyOutput, "{}^{L}K");
+
 global.ONLYOFFICE_LATEX_EXPORT = {
 	mode: "strict",
 	htmlPreferStrict: true,
@@ -279,17 +402,17 @@ const degreeOutput = global.AscMath.ExportToLaTeX({
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(degreeOutput, "x^{2}");
 
-const degreeSubSupFallbackValidation = global.AscMath.CreateLaTeXExportValidation();
-const degreeSubSupFallbackOutput = global.AscMath.ExportToLaTeX({
+const degreeSubSupPreScriptOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CDegreeSubSup"},
 	Pr: {type: -1},
+	getBase() { return textNode("D".codePointAt(0)); },
+	getLowerIterator() { return textNode("q".codePointAt(0)); },
+	getUpperIterator() { return {constructor: {name: "FakeLeaf"}, value: ""}; },
 	GetText() { return "legacy-degree-subsup-fallback"; }
 }, {
 	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
-	validation: degreeSubSupFallbackValidation,
 });
-assert.strictEqual(degreeSubSupFallbackOutput, "legacy-degree-subsup-fallback");
-assert.deepStrictEqual(degreeSubSupFallbackValidation.fallbacks, ["CDegreeSubSup.type:-1", "CDegreeSubSup"]);
+assert.strictEqual(degreeSubSupPreScriptOutput, "{}_{q}D");
 
 const limitOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CLimit"},
@@ -635,13 +758,13 @@ assert.deepStrictEqual(eqArrayEqnoValidation.implementedProperties, ["CEqArray.e
 global.AscMath.SymbolsToLaTeX = {
 	"⏞": "\\overbrace",
 };
-const groupCharacterOutput = global.AscMath.ExportToLaTeX({
+const groupCharacterBraceOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CGroupCharacter"},
 	Pr: {chr: "⏞".charCodeAt(0)},
 	getBase() { return textNode("x".codePointAt(0)); },
 	GetText() { return "legacy-group-character"; }
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
-assert.strictEqual(groupCharacterOutput, "\\overbrace{x}");
+assert.strictEqual(groupCharacterBraceOutput, "\\overbrace{x}");
 
 const groupCharacterPackageValidation = global.AscMath.CreateLaTeXExportValidation();
 const groupCharacterPackageOutput = global.AscMath.ExportToLaTeX({

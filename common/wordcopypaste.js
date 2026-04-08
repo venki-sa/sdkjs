@@ -155,6 +155,18 @@ function GetStrictLaTeXFidelity(validation)
 	return "exact";
 }
 
+function HasStrictLaTeXFallback(validation)
+{
+	if (!validation)
+		return false;
+
+	return !!((validation.fallbacks && validation.fallbacks.length)
+		|| (validation.unknownNodes && validation.unknownNodes.length)
+		|| (validation.unknownSymbols && validation.unknownSymbols.length)
+		|| (validation.forbiddenAliases && validation.forbiddenAliases.length)
+		|| (validation.rendererViolations && validation.rendererViolations.length));
+}
+
 function SetJoinedCopyPasteAttribute(oElement, attributeName, values)
 {
 	var joined = JoinCopyPasteAttributeValues(values);
@@ -754,7 +766,11 @@ CopyProcessor.prototype =
 						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-approximations", oMathExport.strictValidation.approximatedProperties);
 						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-dropped", oMathExport.strictValidation.droppedProperties);
 						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-fallbacks", oMathExport.strictValidation.fallbacks);
-						if (oMathExport.strictValidation.fallbacks && oMathExport.strictValidation.fallbacks.length) {
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-unknown-nodes", oMathExport.strictValidation.unknownNodes);
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-unknown-symbols", oMathExport.strictValidation.unknownSymbols);
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-forbidden-aliases", oMathExport.strictValidation.forbiddenAliases);
+						SetJoinedCopyPasteAttribute(oSpan, "data-latex-strict-renderer-violations", oMathExport.strictValidation.rendererViolations);
+						if (HasStrictLaTeXFallback(oMathExport.strictValidation)) {
 							oSpan.oAttributes["data-latex-strict-has-fallback"] = "true";
 						}
 					}

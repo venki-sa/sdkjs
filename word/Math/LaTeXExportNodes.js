@@ -555,6 +555,61 @@
 		return [token(K.Command, command)].concat(WrapGroup(tokens));
 	}
 
+	function IsVisibleToken(currentToken)
+	{
+		if (!currentToken)
+			return false;
+
+		if (currentToken.kind === K.Invisible || currentToken.kind === K.Space)
+			return false;
+
+		return currentToken.value !== "";
+	}
+
+	function HasVisibleTokens(tokens)
+	{
+		if (!Array.isArray(tokens))
+			return false;
+
+		for (let index = 0; index < tokens.length; index += 1)
+		{
+			if (IsVisibleToken(tokens[index]))
+				return true;
+		}
+
+		return false;
+	}
+
+	function WrapMathOperatorWithLimits(operatorTokens, limitTokens, isUpperLimit)
+	{
+		let result = [token(K.Command, "\\mathop")].concat(WrapGroup(operatorTokens));
+
+		if (HasVisibleTokens(limitTokens))
+		{
+			result.push(token(K.Command, "\\limits"));
+			result.push(isUpperLimit ? token(K.SupOpen, "^{") : token(K.SubOpen, "_{"));
+			result = result.concat(limitTokens, [token(K.GroupClose, "}")]);
+		}
+
+		return result;
+	}
+
+	function IsGroupCharacterArgumentCommand(command)
+	{
+		return command === "\\overparen"
+			|| command === "\\underparen"
+			|| command === "\\overbrace"
+			|| command === "\\underbrace"
+			|| command === "\\overline"
+			|| command === "\\underline"
+			|| command === "\\underbar"
+			|| command === "\\overbar"
+			|| command === "\\overshell"
+			|| command === "\\undershell"
+			|| command === "\\overbracket"
+			|| command === "\\underbracket";
+	}
+
 	function IsStyleEligibleToken(currentToken)
 	{
 		if (!currentToken)
@@ -657,9 +712,18 @@
 	{
 		if (node.Pr.type === -1)
 		{
-			if (context && context.validation)
-				PushValidationEntry(context.validation.fallbacks, "CDegreeSubSup.type:-1");
-			return AscMath.GetFallbackNodeLaTeXTokens(node, context);
+			let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
+			let lower = AscMath.ExportNodeToLaTeXTokens(node.getLowerIterator(), context);
+			let upper = AscMath.ExportNodeToLaTeXTokens(node.getUpperIterator(), context);
+			let result = WrapGroup([]);
+
+			if (HasVisibleTokens(lower))
+				result = result.concat([token(K.SubOpen, "_{")], lower, [token(K.GroupClose, "}")]);
+
+			if (HasVisibleTokens(upper))
+				result = result.concat([token(K.SupOpen, "^{")], upper, [token(K.GroupClose, "}")]);
+
+			return result.concat(base);
 		}
 
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
@@ -1330,12 +1394,20 @@
 	function ExportGroupCharacter(node, context)
 	{
 		let codePoint = node.Pr.chr || (node.operator && typeof node.operator.Get_CodeChr === "function" ? node.operator.Get_CodeChr() : 0);
-		let symbol = codePoint ? String.fromCharCode(codePoint) : "";
+		let symbol = codePoint ? String.fromCodePoint(codePoint) : "";
 		let mapped = "";
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let isAbove = !!(node.Pr && node.Pr.pos === 1);
+		let isHorizontalBracket = !!(AscMath.MathLiterals
+			&& AscMath.MathLiterals.hbrack
+			&& typeof AscMath.MathLiterals.hbrack.SearchU === "function"
+			&& AscMath.MathLiterals.hbrack.SearchU(symbol));
 
-		switch (codePoint)
+		if (isHorizontalBracket)
+		{
+			mapped = symbol && AscMath.SymbolsToLaTeX ? AscMath.SymbolsToLaTeX[symbol] : "";
+		}
+		else switch (codePoint)
 		{
 			case 0x23DE:
 				mapped = "\\overbrace";
@@ -1367,8 +1439,15 @@
 			PushValidationEntry(context.validation.approximatedProperties, "CGroupCharacter.packageCommand");
 		}
 
+		isHorizontalBracket = isHorizontalBracket || IsGroupCharacterArgumentCommand(mapped);
+
 		if (/^\\[A-Za-z]+$/.test(mapped))
-			return WrapCommandArgument(mapped, base);
+		{
+			if (isHorizontalBracket)
+				return WrapCommandArgument(mapped, base);
+
+			return WrapMathOperatorWithLimits([token(K.Command, mapped)], base, isAbove);
+		}
 
 		return AscMath.GetFallbackNodeLaTeXTokens(node, context);
 	}

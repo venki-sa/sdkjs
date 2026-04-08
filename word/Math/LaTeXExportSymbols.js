@@ -47,12 +47,18 @@
 		"⁡": {kind: "invisible"},
 		" ": {kind: "raw", value: "\\ "},
 		"\t": {kind: "raw", value: "\\ "},
+		"\u00a0": {kind: "raw", value: "\\ "},
+		"\u2001": {kind: "raw", value: "\\quad "},
+		"\u2008": {kind: "raw", value: "\\ "},
+		"\u2009": {kind: "raw", value: "\\,"},
 		"{": {kind: "raw", value: "\\{"},
 		"}": {kind: "raw", value: "\\}"},
 		"#": {kind: "raw", value: "\\#"},
 		"%": {kind: "raw", value: "\\%"},
 		"&": {kind: "raw", value: "\\&"},
 		"_": {kind: "raw", value: "\\_"},
+		"−": {kind: "raw", value: "-"},
+		"–": {kind: "raw", value: "-"},
 	};
 
 	function GetCodePointString(value)

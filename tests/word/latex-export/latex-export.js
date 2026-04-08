@@ -119,4 +119,152 @@ $(function () {
 			""
 		);
 	});
+
+	QUnit.test("strict symbol export normalizes common unicode minus and space variants", function (assert) {
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("−", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"-"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("–", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"-"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("\u2008", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\ "
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("\u2009", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\,"
+		);
+	});
+
+	QUnit.test("strict export lowers horizontal group characters as operators with limits", function (assert) {
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+		AscMath.RegisterLaTeXExportNode("FakeLeaf", function (node) {
+			return [AscMath.CreateLaTeXExportToken(AscMath.LaTeXExportTokenKinds.Identifier, node.value)];
+		});
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CGroupCharacter"},
+				Pr: {
+					chr: "→".codePointAt(0),
+					pos: 1
+				},
+				getBase: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: "x"
+					};
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"\\mathop{\\to}\\limits^{x}"
+		);
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CGroupCharacter"},
+				Pr: {
+					chr: "⏞".codePointAt(0),
+					pos: 1
+				},
+				getBase: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: "x"
+					};
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"\\overbrace{x}"
+		);
+	});
+
+	QUnit.test("strict export lowers prescripts without fallback", function (assert) {
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+		AscMath.RegisterLaTeXExportNode("FakeLeaf", function (node) {
+			return node.value
+				? [AscMath.CreateLaTeXExportToken(AscMath.LaTeXExportTokenKinds.Identifier, node.value)]
+				: [];
+		});
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CDegreeSubSup"},
+				Pr: {
+					type: DEGREE_PreSubSup
+				},
+				getBase: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: "D"
+					};
+				},
+				getLowerIterator: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: "q"
+					};
+				},
+				getUpperIterator: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: ""
+					};
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"{}_{q}D"
+		);
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CDegreeSubSup"},
+				Pr: {
+					type: DEGREE_PreSubSup
+				},
+				getBase: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: "K"
+					};
+				},
+				getLowerIterator: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: ""
+					};
+				},
+				getUpperIterator: function () {
+					return {
+						constructor: {name: "FakeLeaf"},
+						value: "L"
+					};
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"{}^{L}K"
+		);
+	});
 });
