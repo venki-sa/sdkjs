@@ -345,9 +345,29 @@
 		return AscMath.ExportNodeToLaTeXTokens(node.Root, context);
 	}
 
+	function TrackMathContentProperties(node, context)
+	{
+		let argSize = null;
+
+		if (!context || !context.validation || !node)
+			return;
+
+		if (typeof node.GetArgSize === "function")
+			argSize = node.GetArgSize();
+		else if (node.ArgSize && typeof node.ArgSize.GetValue === "function")
+			argSize = node.ArgSize.GetValue();
+		else if (node.ArgSize && typeof node.ArgSize.value !== "undefined")
+			argSize = node.ArgSize.value;
+
+		if (argSize !== null && typeof argSize !== "undefined" && Number(argSize) !== 0)
+			PushValidationEntry(context.validation.approximatedProperties, "CMathContent.argSz");
+	}
+
 	function ExportMathContent(node, context)
 	{
 		let result = [];
+
+		TrackMathContentProperties(node, context);
 
 		for (let index = 0; index < node.Content.length; index++)
 			result = result.concat(AscMath.ExportNodeToLaTeXTokens(node.Content[index], context));
@@ -710,6 +730,9 @@
 
 	function ExportDegreeSubSup(node, context)
 	{
+		if (node.Pr && node.Pr.alnScr && context && context.validation)
+			PushValidationEntry(context.validation.approximatedProperties, "CDegreeSubSup.alnScr");
+
 		if (node.Pr.type === -1)
 		{
 			let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
@@ -1040,6 +1063,20 @@
 
 	function ExportBox(node, context)
 	{
+		let pr = node.Pr || {};
+
+		if (context && context.validation)
+		{
+			if (pr.opEmu)
+				PushValidationEntry(context.validation.approximatedProperties, "CBox.opEmu");
+			if (pr.noBreak)
+				PushValidationEntry(context.validation.approximatedProperties, "CBox.noBreak");
+			if (pr.diff)
+				PushValidationEntry(context.validation.approximatedProperties, "CBox.diff");
+			if (pr.brk)
+				PushValidationEntry(context.validation.approximatedProperties, "CBox.brk");
+		}
+
 		return WrapGroup(AscMath.ExportNodeToLaTeXTokens(node.getBase(), context));
 	}
 
@@ -1378,6 +1415,14 @@
 		if (columnSpec !== "c" && context && context.validation)
 			PushValidationEntry(context.validation.approximatedProperties, "CEqArray.baseJc");
 
+		if (context && context.validation && node.Pr)
+		{
+			if (node.Pr.maxDist)
+				PushValidationEntry(context.validation.approximatedProperties, "CEqArray.maxDist");
+			if (node.Pr.objDist)
+				PushValidationEntry(context.validation.approximatedProperties, "CEqArray.objDist");
+		}
+
 		if (hasEqno)
 		{
 			for (rowIndex = 0; rowIndex < rows.length; rowIndex += 1)
@@ -1437,6 +1482,15 @@
 		{
 			RequirePackage(context, "mathtools");
 			PushValidationEntry(context.validation.approximatedProperties, "CGroupCharacter.packageCommand");
+		}
+
+		if (node.Pr
+			&& typeof node.Pr.vertJc !== "undefined"
+			&& typeof node.Pr.pos !== "undefined"
+			&& node.Pr.vertJc !== node.Pr.pos
+			&& context && context.validation)
+		{
+			PushValidationEntry(context.validation.approximatedProperties, "CGroupCharacter.vertJc");
 		}
 
 		isHorizontalBracket = isHorizontalBracket || IsGroupCharacterArgumentCommand(mapped);

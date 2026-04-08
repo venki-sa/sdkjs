@@ -51,6 +51,9 @@
 		"\u2001": {kind: "raw", value: "\\quad "},
 		"\u2008": {kind: "raw", value: "\\ "},
 		"\u2009": {kind: "raw", value: "\\,"},
+		"（": {kind: "raw", value: "("},
+		"）": {kind: "raw", value: ")"},
+		"·": {kind: "command", value: "\\cdot"},
 		"{": {kind: "raw", value: "\\{"},
 		"}": {kind: "raw", value: "\\}"},
 		"#": {kind: "raw", value: "\\#"},
@@ -101,6 +104,9 @@
 
 			if (explicit.kind === "structural")
 				return ExpandStructuralSymbol(symbol);
+
+			if (explicit.kind === "command")
+				return [token(K.Command, explicit.value, "symbol:" + symbol)];
 
 			return [token(K.Raw, explicit.value, "symbol:" + symbol)];
 		}

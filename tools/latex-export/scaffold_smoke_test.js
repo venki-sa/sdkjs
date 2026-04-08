@@ -246,6 +246,24 @@ const thinSpaceOutput = global.AscMath.RenderLaTeXExportTokens(
 );
 assert.strictEqual(thinSpaceOutput, "\\,");
 
+const fullwidthLeftParenOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("（", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(fullwidthLeftParenOutput, "(");
+
+const fullwidthRightParenOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("）", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(fullwidthRightParenOutput, ")");
+
+const middleDotOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("·", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(middleDotOutput, "\\cdot");
+
 global.AscMath.RegisterLaTeXExportNode("FakeLeaf", function (node) {
 	return [token(K.Identifier, node.value)];
 });
@@ -1143,5 +1161,89 @@ const naryGrowOutput = global.AscMath.ExportToLaTeX({
 });
 assert.strictEqual(naryGrowOutput, "\\sum\\limits_{i}^{n}x");
 assert.deepStrictEqual(naryGrowValidation.approximatedProperties, ["CNary.grow"]);
+
+const argSizeValidation = global.AscMath.CreateLaTeXExportValidation();
+const argSizeOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CMathContent"},
+	GetArgSize() { return -1; },
+	Content: [],
+	GetText() { return "legacy-arg-size"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: argSizeValidation,
+});
+assert.strictEqual(argSizeOutput, "");
+assert.deepStrictEqual(argSizeValidation.approximatedProperties, ["CMathContent.argSz"]);
+
+const alignedScriptValidation = global.AscMath.CreateLaTeXExportValidation();
+const alignedScriptOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegreeSubSup"},
+	Pr: {
+		type: global.DEGREE_PreSubSup,
+		alnScr: true,
+	},
+	getBase() { return textNode("D".codePointAt(0)); },
+	getLowerIterator() { return textNode("q".codePointAt(0)); },
+	getUpperIterator() { return {constructor: {name: "FakeLeaf"}, value: "", GetText() { return ""; }}; },
+	GetText() { return "legacy-aln-scr"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: alignedScriptValidation,
+});
+assert.strictEqual(alignedScriptOutput, "{}_{q}D");
+assert.deepStrictEqual(alignedScriptValidation.approximatedProperties, ["CDegreeSubSup.alnScr"]);
+
+const groupVertJcValidation = global.AscMath.CreateLaTeXExportValidation();
+const groupVertJcOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CGroupCharacter"},
+	Pr: {
+		chr: "⏞".codePointAt(0),
+		pos: 1,
+		vertJc: 0,
+	},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-group-vertjc"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: groupVertJcValidation,
+});
+assert.strictEqual(groupVertJcOutput, "\\overbrace{x}");
+assert.deepStrictEqual(groupVertJcValidation.approximatedProperties, ["CGroupCharacter.vertJc"]);
+
+const eqArrayDistanceValidation = global.AscMath.CreateLaTeXExportValidation();
+const eqArrayDistanceOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CEqArray"},
+	Pr: {
+		row: 1,
+		baseJc: global.BASEJC_CENTER,
+		maxDist: 1,
+		objDist: 1,
+	},
+	getElement() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-eqarr-distance"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: eqArrayDistanceValidation,
+});
+assert.strictEqual(eqArrayDistanceOutput, "\\begin{array}{c}x\\end{array}");
+assert.deepStrictEqual(eqArrayDistanceValidation.approximatedProperties, ["CEqArray.maxDist", "CEqArray.objDist"]);
+
+const boxPropertyValidation = global.AscMath.CreateLaTeXExportValidation();
+const boxPropertyOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CBox"},
+	Pr: {
+		opEmu: true,
+		noBreak: true,
+		diff: true,
+		brk: {},
+	},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-box-properties"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: boxPropertyValidation,
+});
+assert.strictEqual(boxPropertyOutput, "{x}");
+assert.deepStrictEqual(boxPropertyValidation.approximatedProperties, ["CBox.opEmu", "CBox.noBreak", "CBox.diff", "CBox.brk"]);
 
 console.log("strict export scaffold smoke tests: ok");

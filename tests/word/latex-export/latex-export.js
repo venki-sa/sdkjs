@@ -152,6 +152,30 @@ $(function () {
 			),
 			"\\,"
 		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("（", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"("
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("）", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			")"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("·", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\cdot"
+		);
 	});
 
 	QUnit.test("strict export lowers horizontal group characters as operators with limits", function (assert) {
@@ -266,5 +290,100 @@ $(function () {
 			}),
 			"{}^{L}K"
 		);
+	});
+
+	QUnit.test("strict export records approximated OMML properties for unportable node settings", function (assert) {
+		let validation = AscMath.CreateLaTeXExportValidation();
+		let options = {
+			mode: AscMath.c_oAscLaTeXExportMode.Strict,
+			validation: validation
+		};
+
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+		AscMath.RegisterLaTeXExportNode("FakeLeaf", function (node) {
+			return node.value
+				? [AscMath.CreateLaTeXExportToken(AscMath.LaTeXExportTokenKinds.Identifier, node.value)]
+				: [];
+		});
+
+		AscMath.ExportToLaTeX({
+			constructor: {name: "CMathContent"},
+			GetArgSize: function () {
+				return -1;
+			},
+			Content: []
+		}, options);
+		assert.ok(validation.approximatedProperties.includes("CMathContent.argSz"), "argSz surfaced");
+
+		validation = AscMath.CreateLaTeXExportValidation();
+		options.validation = validation;
+		AscMath.ExportToLaTeX({
+			constructor: {name: "CDegreeSubSup"},
+			Pr: {
+				type: DEGREE_PreSubSup,
+				alnScr: true
+			},
+			getBase: function () {
+				return {constructor: {name: "FakeLeaf"}, value: "D"};
+			},
+			getLowerIterator: function () {
+				return {constructor: {name: "FakeLeaf"}, value: "q"};
+			},
+			getUpperIterator: function () {
+				return {constructor: {name: "FakeLeaf"}, value: ""};
+			}
+		}, options);
+		assert.ok(validation.approximatedProperties.includes("CDegreeSubSup.alnScr"), "alnScr surfaced");
+
+		validation = AscMath.CreateLaTeXExportValidation();
+		options.validation = validation;
+		AscMath.ExportToLaTeX({
+			constructor: {name: "CGroupCharacter"},
+			Pr: {
+				chr: "⏞".codePointAt(0),
+				pos: 1,
+				vertJc: 0
+			},
+			getBase: function () {
+				return {constructor: {name: "FakeLeaf"}, value: "x"};
+			}
+		}, options);
+		assert.ok(validation.approximatedProperties.includes("CGroupCharacter.vertJc"), "vertJc surfaced");
+
+		validation = AscMath.CreateLaTeXExportValidation();
+		options.validation = validation;
+		AscMath.ExportToLaTeX({
+			constructor: {name: "CEqArray"},
+			Pr: {
+				row: 1,
+				baseJc: BASEJC_CENTER,
+				maxDist: 1,
+				objDist: 1
+			},
+			getElement: function () {
+				return {constructor: {name: "FakeLeaf"}, value: "x"};
+			}
+		}, options);
+		assert.ok(validation.approximatedProperties.includes("CEqArray.maxDist"), "maxDist surfaced");
+		assert.ok(validation.approximatedProperties.includes("CEqArray.objDist"), "objDist surfaced");
+
+		validation = AscMath.CreateLaTeXExportValidation();
+		options.validation = validation;
+		AscMath.ExportToLaTeX({
+			constructor: {name: "CBox"},
+			Pr: {
+				opEmu: true,
+				noBreak: true,
+				diff: true,
+				brk: {}
+			},
+			getBase: function () {
+				return {constructor: {name: "FakeLeaf"}, value: "x"};
+			}
+		}, options);
+		assert.ok(validation.approximatedProperties.includes("CBox.opEmu"), "opEmu surfaced");
+		assert.ok(validation.approximatedProperties.includes("CBox.noBreak"), "noBreak surfaced");
+		assert.ok(validation.approximatedProperties.includes("CBox.diff"), "diff surfaced");
+		assert.ok(validation.approximatedProperties.includes("CBox.brk"), "brk surfaced");
 	});
 });
