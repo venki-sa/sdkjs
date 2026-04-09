@@ -158,6 +158,14 @@ $(function () {
 
 		assert.strictEqual(
 			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("\u2005", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\;"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
 				AscMath.ExportSymbolToLaTeXTokens("（", AscMath.CreateLaTeXExportContext()),
 				AscMath.CreateLaTeXExportContext()
 			),
@@ -210,6 +218,22 @@ $(function () {
 				AscMath.CreateLaTeXExportContext()
 			),
 			"h"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("∆", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\Delta"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("Χ", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"X"
 		);
 
 		assert.strictEqual(

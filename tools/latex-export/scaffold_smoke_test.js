@@ -249,6 +249,12 @@ const thinSpaceOutput = global.AscMath.RenderLaTeXExportTokens(
 );
 assert.strictEqual(thinSpaceOutput, "\\,");
 
+const thickSpaceOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("\u2005", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(thickSpaceOutput, "\\;");
+
 const fullwidthLeftParenOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.ExportSymbolToLaTeXTokens("（", global.AscMath.CreateLaTeXExportContext()),
 	global.AscMath.CreateLaTeXExportContext()
@@ -290,6 +296,18 @@ const planckStyleHOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.CreateLaTeXExportContext()
 );
 assert.strictEqual(planckStyleHOutput, "h");
+
+const incrementOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("∆", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(incrementOutput, "\\Delta");
+
+const capitalChiOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("Χ", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(capitalChiOutput, "X");
 
 const reversibleArrowOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.ExportSymbolToLaTeXTokens("⇌", global.AscMath.CreateLaTeXExportContext()),

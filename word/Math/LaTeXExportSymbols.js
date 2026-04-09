@@ -57,15 +57,19 @@
 		"\t": {kind: "raw", value: "\\ "},
 		"\u00a0": {kind: "raw", value: "\\ "},
 		"\u2001": {kind: "raw", value: "\\quad "},
+		"\u2005": {kind: "raw", value: "\\;"},
 		"\u2008": {kind: "raw", value: "\\ "},
 		"\u2009": {kind: "raw", value: "\\,"},
 		"（": {kind: "raw", value: "("},
 		"）": {kind: "raw", value: ")"},
+		"∆": {kind: "command", value: "\\Delta"},
 		"·": {kind: "command", value: "\\cdot"},
 		// Deliberately prefer math-semantic mu in strict math output.
 		// The generated W3C baseline maps MICRO SIGN to \mathrm{\mu}, which is more text-flavored.
 		// Context-sensitive unit/text handling should be solved separately rather than changing the global strict default here.
 		"µ": {kind: "command", value: "\\mu"},
+		// There is no standard \Chi command in portable LaTeX; use the glyph-equivalent identifier.
+		"Χ": {kind: "identifier", value: "X"},
 		"ℎ": {kind: "identifier", value: "h"},
 		"≔": {kind: "raw", value: ":="},
 		"{": {kind: "raw", value: "\\{"},
