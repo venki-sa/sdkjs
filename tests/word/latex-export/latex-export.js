@@ -121,6 +121,8 @@ $(function () {
 	});
 
 	QUnit.test("strict symbol export normalizes common unicode minus and space variants", function (assert) {
+		assert.ok(AscMath.StrictLaTeXReferenceSymbolsMeta.entries > 2000, "generated reference baseline is loaded");
+
 		assert.strictEqual(
 			AscMath.RenderLaTeXExportTokens(
 				AscMath.ExportSymbolToLaTeXTokens("−", AscMath.CreateLaTeXExportContext()),
@@ -208,6 +210,62 @@ $(function () {
 			),
 			"h"
 		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("⇌", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\rightleftharpoons"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("Å", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\AA"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("Å", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\AA"
+		);
+	});
+
+	QUnit.test("strict symbol export preserves override precedence over generated baseline", function (assert) {
+		let previous = AscMath.SymbolsToLaTeX["⇌"];
+
+		AscMath.SymbolsToLaTeX["⇌"] = "\\customrightleftharpoons";
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("⇌", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\customrightleftharpoons"
+		);
+
+		if (typeof previous === "undefined")
+			delete AscMath.SymbolsToLaTeX["⇌"];
+		else
+			AscMath.SymbolsToLaTeX["⇌"] = previous;
+	});
+
+	QUnit.test("strict symbol export keeps unresolved context-sensitive symbols out of the generated baseline", function (assert) {
+		let validation = AscMath.CreateLaTeXExportValidation();
+		let context = AscMath.CreateLaTeXExportContext({validation: validation});
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("’", context),
+				context
+			),
+			"’"
+		);
+		assert.deepEqual(validation.unknownSymbols, ["’"], "context-sensitive quote stays unresolved until policy is implemented");
 	});
 
 	QUnit.test("strict symbol export classifies placeholder glyphs as renderer violations", function (assert) {
@@ -337,6 +395,98 @@ $(function () {
 			}),
 			"{}^{L}K"
 		);
+	});
+
+	QUnit.test("strict export omits empty placeholder script iterators", function (assert) {
+		let validation = AscMath.CreateLaTeXExportValidation();
+		let options = {
+			mode: AscMath.c_oAscLaTeXExportMode.Strict,
+			validation: validation
+		};
+
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CDegree"},
+				Pr: {type: 0},
+				getBase: function () {
+					return {
+						constructor: {name: "CMathText"},
+						value: "r".codePointAt(0)
+					};
+				},
+				getIterator: function () {
+					return {
+						constructor: {name: "CMathText"},
+						value: 0x2B1A
+					};
+				}
+			}, options),
+			"r"
+		);
+		assert.deepEqual(validation.rendererViolations, ["empty-script-iterator:CDegree"], "empty placeholder subscript is omitted");
+
+		validation = AscMath.CreateLaTeXExportValidation();
+		options.validation = validation;
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CDegreeSubSup"},
+				Pr: {type: 0},
+				getBase: function () {
+					return {
+						constructor: {name: "CMathText"},
+						value: "f".codePointAt(0)
+					};
+				},
+				getLowerIterator: function () {
+					return {
+						constructor: {name: "CMathText"},
+						value: 0x2B1A
+					};
+				},
+				getUpperIterator: function () {
+					return {
+						constructor: {name: "CMathText"},
+						value: "2".codePointAt(0)
+					};
+				}
+			}, options),
+			"f^{2}"
+		);
+		assert.deepEqual(validation.rendererViolations, ["empty-script-iterator:CDegreeSubSup.lower"], "empty placeholder lower iterator is omitted");
+	});
+
+	QUnit.test("strict export lowers unmapped group characters without generic fallback", function (assert) {
+		let validation = AscMath.CreateLaTeXExportValidation();
+
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CGroupCharacter"},
+				Pr: {
+					chr: "⇌".codePointAt(0),
+					pos: 1
+				},
+				getBase: function () {
+					return {
+						constructor: {name: "CMathText"},
+						value: "x".codePointAt(0)
+					};
+				},
+				GetText: function () {
+					return "legacy-group-character";
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict,
+				validation: validation
+			}),
+			"\\mathop{⇌}\\limits^{x}"
+		);
+		assert.deepEqual(validation.fallbacks, [], "unmapped group character no longer falls back generically");
+		assert.ok(validation.approximatedProperties.includes("CGroupCharacter.rawSymbol"), "rawSymbol approximation is surfaced");
 	});
 
 	QUnit.test("strict export records approximated OMML properties for unportable node settings", function (assert) {

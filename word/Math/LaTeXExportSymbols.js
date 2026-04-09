@@ -41,6 +41,13 @@
 		"\\degc": true,
 		"\\funcapply": true,
 	};
+	const GeneratedReferenceSymbols = AscMath.StrictLaTeXReferenceSymbols || {};
+	const GeneratedReferenceDenyList = {
+		"’": true,
+		"ǀ": true,
+		"\u0304": true,
+		"ẋ": true,
+	};
 
 	const ExplicitSymbols = {
 		"℃": {kind: "structural"},
@@ -129,6 +136,20 @@
 		return [];
 	}
 
+	function LookupSymbolMapping(symbol)
+	{
+		if (!symbol)
+			return "";
+
+		if (AscMath.SymbolsToLaTeX && AscMath.SymbolsToLaTeX[symbol])
+			return AscMath.SymbolsToLaTeX[symbol];
+
+		if (!GeneratedReferenceDenyList[symbol] && GeneratedReferenceSymbols[symbol])
+			return GeneratedReferenceSymbols[symbol];
+
+		return "";
+	}
+
 	function ExportSymbolToLaTeXTokens(symbol, context)
 	{
 		if (!symbol)
@@ -161,7 +182,7 @@
 		if (/^[0-9]$/.test(symbol))
 			return [token(K.Number, symbol, "symbol:" + symbol)];
 
-		const mapped = AscMath.SymbolsToLaTeX && AscMath.SymbolsToLaTeX[symbol];
+		const mapped = LookupSymbolMapping(symbol);
 		if (mapped)
 		{
 			if (ForbiddenLegacyCommands[mapped])

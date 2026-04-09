@@ -14,6 +14,7 @@ const files = [
 	"word/Math/LaTeXExportTokens.js",
 	"word/Math/LaTeXExportRenderer.js",
 	"word/Math/LaTeXExportRegistry.js",
+	"word/Math/LaTeXReferenceSymbols.generated.js",
 	"word/Math/LaTeXExportSymbols.js",
 	"word/Math/LaTeXExportNodes.js",
 ];
@@ -209,6 +210,7 @@ const fallbackOutput = global.AscMath.ExportToLaTeX({
 	}
 });
 assert.strictEqual(fallbackOutput, "legacy-fallback");
+assert.ok(global.AscMath.StrictLaTeXReferenceSymbolsMeta.entries > 2000);
 
 const symbolOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.ExportSymbolToLaTeXTokens("℃", global.AscMath.CreateLaTeXExportContext()),
@@ -287,6 +289,33 @@ const planckStyleHOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.CreateLaTeXExportContext()
 );
 assert.strictEqual(planckStyleHOutput, "h");
+
+const reversibleArrowOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("⇌", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(reversibleArrowOutput, "\\rightleftharpoons");
+
+const angstromOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("Å", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(angstromOutput, "\\AA");
+
+const angstromSignOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("Å", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(angstromSignOutput, "\\AA");
+
+const contextSensitiveValidation = global.AscMath.CreateLaTeXExportValidation();
+const contextSensitiveContext = global.AscMath.CreateLaTeXExportContext({validation: contextSensitiveValidation});
+const rightQuoteOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("’", contextSensitiveContext),
+	contextSensitiveContext
+);
+assert.strictEqual(rightQuoteOutput, "’");
+assert.deepStrictEqual(contextSensitiveValidation.unknownSymbols, ["’"]);
 
 const placeholderValidation = global.AscMath.CreateLaTeXExportValidation();
 const placeholderContext = global.AscMath.CreateLaTeXExportContext({validation: placeholderValidation});
@@ -454,6 +483,20 @@ const degreeOutput = global.AscMath.ExportToLaTeX({
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(degreeOutput, "x^{2}");
 
+const placeholderDegreeValidation = global.AscMath.CreateLaTeXExportValidation();
+const placeholderDegreeOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegree"},
+	Pr: {type: 0},
+	getBase() { return textNode("r".codePointAt(0)); },
+	getIterator() { return textNode(0x2B1A); },
+	GetText() { return "legacy-degree-placeholder"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: placeholderDegreeValidation,
+});
+assert.strictEqual(placeholderDegreeOutput, "r");
+assert.deepStrictEqual(placeholderDegreeValidation.rendererViolations, ["empty-script-iterator:CDegree"]);
+
 const degreeSubSupPreScriptOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CDegreeSubSup"},
 	Pr: {type: -1},
@@ -465,6 +508,21 @@ const degreeSubSupPreScriptOutput = global.AscMath.ExportToLaTeX({
 	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
 });
 assert.strictEqual(degreeSubSupPreScriptOutput, "{}_{q}D");
+
+const placeholderDegreeSubSupValidation = global.AscMath.CreateLaTeXExportValidation();
+const placeholderDegreeSubSupOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegreeSubSup"},
+	Pr: {type: 0},
+	getBase() { return textNode("f".codePointAt(0)); },
+	getLowerIterator() { return textNode(0x2B1A); },
+	getUpperIterator() { return textNode("2".codePointAt(0)); },
+	GetText() { return "legacy-degree-subsup-placeholder"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: placeholderDegreeSubSupValidation,
+});
+assert.strictEqual(placeholderDegreeSubSupOutput, "f^{2}");
+assert.deepStrictEqual(placeholderDegreeSubSupValidation.rendererViolations, ["empty-script-iterator:CDegreeSubSup.lower"]);
 
 const limitOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CLimit"},
@@ -913,6 +971,20 @@ const groupCharacterPackageOutput = global.AscMath.ExportToLaTeX({
 assert.strictEqual(groupCharacterPackageOutput, "\\overparen{x}");
 assert.deepStrictEqual(groupCharacterPackageValidation.requiredPackages, ["mathtools"]);
 assert.deepStrictEqual(groupCharacterPackageValidation.approximatedProperties, ["CGroupCharacter.packageCommand"]);
+
+const rawGroupCharacterValidation = global.AscMath.CreateLaTeXExportValidation();
+const rawGroupCharacterOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CGroupCharacter"},
+	Pr: {chr: "⇌".codePointAt(0), pos: 1},
+	getBase() { return textNode("x".codePointAt(0)); },
+	GetText() { return "legacy-group-raw-symbol"; }
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: rawGroupCharacterValidation,
+});
+assert.strictEqual(rawGroupCharacterOutput, "\\mathop{⇌}\\limits^{x}");
+assert.deepStrictEqual(rawGroupCharacterValidation.fallbacks, []);
+assert.deepStrictEqual(rawGroupCharacterValidation.approximatedProperties, ["CGroupCharacter.rawSymbol"]);
 
 const mathAmpOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CMathAmp"},

@@ -446,6 +446,7 @@
 			"word/Math/LaTeXExportTokens.js",
 			"word/Math/LaTeXExportRenderer.js",
 			"word/Math/LaTeXExportRegistry.js",
+			"word/Math/LaTeXReferenceSymbols.generated.js",
 			"word/Math/LaTeXExportSymbols.js",
 			"word/Math/LaTeXExportNodes.js",
 

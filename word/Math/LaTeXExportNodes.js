@@ -50,11 +50,52 @@
 		collection.push(value);
 	}
 
+	function RecordRendererViolation(context, code)
+	{
+		if (!context || !context.validation)
+			return;
+
+		PushValidationEntry(context.validation.rendererViolations, code);
+	}
+
 	function HasPackageFeature(context, featureName)
 	{
 		return !!(context
 			&& context.packageFeatures
 			&& context.packageFeatures[featureName]);
+	}
+
+	function GetNodeCodePoint(node)
+	{
+		if (!node)
+			return null;
+
+		if (typeof node.GetCodePoint === "function")
+			return node.GetCodePoint();
+
+		if (typeof node.value !== "undefined")
+			return node.value;
+
+		return null;
+	}
+
+	function HasPlaceholderContent(node)
+	{
+		let codePoint = GetNodeCodePoint(node);
+		let children;
+		let index;
+
+		if (codePoint === 0x2B1A || codePoint === 0xFFFC)
+			return true;
+
+		children = GetNodeChildSequence(node);
+		for (index = 0; index < children.length; index += 1)
+		{
+			if (HasPlaceholderContent(children[index]))
+				return true;
+		}
+
+		return false;
 	}
 
 	function RequirePackage(context, packageName)
@@ -833,6 +874,24 @@
 		return result.concat(iterator, [token(K.GroupClose, "}")]);
 	}
 
+	function AppendVisibleScriptTokens(result, kind, iteratorNode, iterator, context, violationCode)
+	{
+		if (!iterator || iterator.length === 0)
+		{
+			if (iteratorNode && HasPlaceholderContent(iteratorNode))
+				RecordRendererViolation(context, violationCode);
+			return result;
+		}
+
+		if (!HasVisibleTokens(iterator))
+		{
+			RecordRendererViolation(context, violationCode);
+			return result;
+		}
+
+		return AppendScriptTokens(result, kind, iterator);
+	}
+
 	function ExportFraction(node, context)
 	{
 		let numerator = AscMath.ExportNodeToLaTeXTokens(node.getNumerator(), context);
@@ -866,9 +925,9 @@
 		TrackCtrlPrProperty(node.Pr, context, "CDegree.ctrlPr");
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let iterator = AscMath.ExportNodeToLaTeXTokens(node.getIterator(), context);
-		let scriptOpen = node.Pr.type === 1 ? token(K.SupOpen, "^{") : token(K.SubOpen, "_{");
+		let isSup = node.Pr.type === 1;
 
-		return base.concat([scriptOpen], iterator, [token(K.GroupClose, "}")]);
+		return AppendVisibleScriptTokens(base, isSup ? "sup" : "sub", node.getIterator(), iterator, context, "empty-script-iterator:CDegree");
 	}
 
 	function ExportDegreeSubSup(node, context)
@@ -884,11 +943,8 @@
 			let upper = AscMath.ExportNodeToLaTeXTokens(node.getUpperIterator(), context);
 			let result = WrapGroup([]);
 
-			if (HasVisibleTokens(lower))
-				result = result.concat([token(K.SubOpen, "_{")], lower, [token(K.GroupClose, "}")]);
-
-			if (HasVisibleTokens(upper))
-				result = result.concat([token(K.SupOpen, "^{")], upper, [token(K.GroupClose, "}")]);
+			result = AppendVisibleScriptTokens(result, "sub", node.getLowerIterator(), lower, context, "empty-script-iterator:CDegreeSubSup.lower");
+			result = AppendVisibleScriptTokens(result, "sup", node.getUpperIterator(), upper, context, "empty-script-iterator:CDegreeSubSup.upper");
 
 			return result.concat(base);
 		}
@@ -896,15 +952,11 @@
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let lower = AscMath.ExportNodeToLaTeXTokens(node.getLowerIterator(), context);
 		let upper = AscMath.ExportNodeToLaTeXTokens(node.getUpperIterator(), context);
+		let result = base.slice();
 
-		return base.concat(
-			[token(K.SubOpen, "_{")],
-			lower,
-			[token(K.GroupClose, "}")],
-			[token(K.SupOpen, "^{")],
-			upper,
-			[token(K.GroupClose, "}")]
-		);
+		result = AppendVisibleScriptTokens(result, "sub", node.getLowerIterator(), lower, context, "empty-script-iterator:CDegreeSubSup.lower");
+		result = AppendVisibleScriptTokens(result, "sup", node.getUpperIterator(), upper, context, "empty-script-iterator:CDegreeSubSup.upper");
+		return result;
 	}
 
 	function ExportRadical(node, context)
@@ -1720,6 +1772,14 @@
 				return WrapCommandArgument(mapped, base);
 
 			return WrapMathOperatorWithLimits([token(K.Command, mapped)], base, isAbove);
+		}
+
+		if (symbol)
+		{
+			if (context && context.validation)
+				PushValidationEntry(context.validation.approximatedProperties, "CGroupCharacter.rawSymbol");
+
+			return WrapMathOperatorWithLimits([token(K.Raw, symbol, "group-character:" + symbol)], base, isAbove);
 		}
 
 		return AscMath.GetFallbackNodeLaTeXTokens(node, context);
