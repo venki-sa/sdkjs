@@ -103,6 +103,24 @@ $(function () {
 		assert.strictEqual(mathContent.GetLaTeXText(), "\\alpha x");
 	});
 
+	QUnit.test("strict fallback text tokenizes legacy OMML commands before symbol splitting", function (assert) {
+		let validation = AscMath.CreateLaTeXExportValidation();
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "UnknownLegacyNode"},
+				GetText: function () {
+					return "\\inc\\thicksp x\\funcapply";
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict,
+				validation: validation
+			}),
+			"\\Delta\\;x"
+		);
+		assert.deepEqual(validation.fallbacks, ["UnknownLegacyNode"], "legacy node still records fallback identity");
+	});
+
 	QUnit.test("strict symbol overrides remove OMML-only aliases", function (assert) {
 		assert.strictEqual(
 			AscMath.RenderLaTeXExportTokens(
@@ -514,6 +532,35 @@ $(function () {
 		);
 		assert.deepEqual(validation.fallbacks, [], "unmapped group character no longer falls back generically");
 		assert.notOk(validation.approximatedProperties.includes("CGroupCharacter.rawSymbol"), "mapped group character no longer degrades to a raw symbol");
+	});
+
+	QUnit.test("strict renderer inserts boundary spaces after raw command-like tokens", function (assert) {
+		let K = AscMath.LaTeXExportTokenKinds;
+		let token = AscMath.CreateLaTeXExportToken;
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens([
+				token(K.Raw, "\\to"),
+				token(K.Identifier, "x")
+			], AscMath.CreateLaTeXExportContext()),
+			"\\to x"
+		);
+	});
+
+	QUnit.test("strict renderer records brace balance violations without mutating output", function (assert) {
+		let K = AscMath.LaTeXExportTokenKinds;
+		let token = AscMath.CreateLaTeXExportToken;
+		let validation = AscMath.CreateLaTeXExportValidation();
+		let context = AscMath.CreateLaTeXExportContext({validation: validation});
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens([
+				token(K.GroupOpen, "{"),
+				token(K.Identifier, "x")
+			], context),
+			"{x"
+		);
+		assert.deepEqual(validation.rendererViolations, ["brace-balance:missing-close"]);
 	});
 
 	QUnit.test("strict export records approximated OMML properties for unportable node settings", function (assert) {

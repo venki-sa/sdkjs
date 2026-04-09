@@ -85,6 +85,16 @@
 		"⬚": true,
 		"\uFFFC": true,
 	};
+	const LegacyCommandOverrides = {
+		"\\inc": {kind: "command", value: "\\Delta"},
+		"\\funcapply": {kind: "invisible"},
+		"\\thicksp": {kind: "raw", value: "\\;"},
+		"\\vthicksp": {kind: "raw", value: "\\;"},
+		"\\degc": {kind: "structural", symbol: "℃"},
+		"\\below": {kind: "command", value: "\\underset"},
+		"\\above": {kind: "command", value: "\\overset"},
+		"\\hvec": {kind: "command", value: "\\vec"},
+	};
 
 	function GetCodePointString(value)
 	{
@@ -126,6 +136,30 @@
 		return [token(K.Raw, symbol)];
 	}
 
+	function ExpandLegacyCommand(override)
+	{
+		if (!override)
+			return [];
+
+		if (override.kind === "invisible")
+			return [token(K.Invisible, "", "legacy-command")];
+
+		if (override.kind === "structural")
+			return ExpandStructuralSymbol(override.symbol);
+
+		if (override.kind === "command")
+			return [token(K.Command, override.value, "legacy-command")];
+
+		return [token(K.Raw, override.value, "legacy-command")];
+	}
+
+	function ShouldSkipFollowingSpaceForLegacyCommand(command)
+	{
+		return command === "\\funcapply"
+			|| command === "\\thicksp"
+			|| command === "\\vthicksp";
+	}
+
 	function GetSymbolCodePointLabel(symbol)
 	{
 		if (!symbol)
@@ -160,6 +194,28 @@
 	function GetSymbolToLaTeXMapping(symbol)
 	{
 		return LookupSymbolMapping(symbol);
+	}
+
+	function ExportLegacyCommandToLaTeXTokens(command, context)
+	{
+		let override;
+
+		if (!command)
+			return [];
+
+		override = LegacyCommandOverrides[command];
+		if (override)
+			return ExpandLegacyCommand(override);
+
+		if (ForbiddenLegacyCommands[command])
+		{
+			if (context && context.validation)
+				context.validation.forbiddenAliases.push(command);
+
+			return [];
+		}
+
+		return [token(K.Raw, command, "legacy-command")];
 	}
 
 	function ExportSymbolToLaTeXTokens(symbol, context)
@@ -222,5 +278,7 @@
 
 	AscMath.GetLaTeXExportCodePointString = GetCodePointString;
 	AscMath.GetStrictLaTeXSymbolMapping = GetSymbolToLaTeXMapping;
+	AscMath.ExportLegacyCommandToLaTeXTokens = ExportLegacyCommandToLaTeXTokens;
+	AscMath.ShouldSkipFollowingSpaceForLegacyCommand = ShouldSkipFollowingSpaceForLegacyCommand;
 	AscMath.ExportSymbolToLaTeXTokens = ExportSymbolToLaTeXTokens;
 })(window);

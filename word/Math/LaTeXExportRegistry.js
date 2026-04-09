@@ -161,6 +161,11 @@
 	{
 		let text = "";
 		let nodeIdentity = GetNodeIdentity(node);
+		let result = [];
+		let commandPattern = /^\\[A-Za-z]+/;
+		let index = 0;
+		let match;
+		let symbol;
 
 		if (context && context.validation)
 			context.validation.fallbacks.push(nodeIdentity.name);
@@ -170,7 +175,30 @@
 		else if (node && typeof node.GetText === "function")
 			text = node.GetText(true);
 
-		return [token(K.Raw, text, "fallback:" + nodeIdentity.name)];
+		while (index < text.length)
+		{
+			if (text[index] === "\\")
+			{
+				match = text.slice(index).match(commandPattern);
+				if (match)
+				{
+					result = result.concat(AscMath.ExportLegacyCommandToLaTeXTokens(match[0], context));
+					index += match[0].length;
+					if (AscMath.ShouldSkipFollowingSpaceForLegacyCommand(match[0]))
+					{
+						while (text[index] === " ")
+							index += 1;
+					}
+					continue;
+				}
+			}
+
+			symbol = Array.from(text.slice(index))[0];
+			result = result.concat(AscMath.ExportSymbolToLaTeXTokens(symbol, context));
+			index += symbol.length;
+		}
+
+		return result.length > 0 ? result : [token(K.Raw, text, "fallback:" + nodeIdentity.name)];
 	}
 
 	function ExportNodeToLaTeXTokens(node, context)

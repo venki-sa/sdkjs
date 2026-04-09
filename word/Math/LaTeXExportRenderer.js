@@ -170,8 +170,15 @@
 				nested = ParseNormalizedSequence(tokens, index + 2, TokenKinds.GroupClose, activeStyles);
 				result.push(currentToken, tokens[index + 1]);
 				result = result.concat(nested.tokens);
-				result.push(tokens[nested.nextIndex]);
-				index = nested.nextIndex + 1;
+				if (tokens[nested.nextIndex] && tokens[nested.nextIndex].kind === TokenKinds.GroupClose)
+				{
+					result.push(tokens[nested.nextIndex]);
+					index = nested.nextIndex + 1;
+				}
+				else
+				{
+					index = nested.nextIndex;
+				}
 				continue;
 			}
 
@@ -180,8 +187,15 @@
 				nested = ParseNormalizedSequence(tokens, index + 1, TokenKinds.GroupClose, activeStyles);
 				result.push(currentToken);
 				result = result.concat(nested.tokens);
-				result.push(tokens[nested.nextIndex]);
-				index = nested.nextIndex + 1;
+				if (tokens[nested.nextIndex] && tokens[nested.nextIndex].kind === TokenKinds.GroupClose)
+				{
+					result.push(tokens[nested.nextIndex]);
+					index = nested.nextIndex + 1;
+				}
+				else
+				{
+					index = nested.nextIndex;
+				}
 				continue;
 			}
 
@@ -205,20 +219,54 @@
 		};
 	}
 
-	function NormalizeLaTeXExportTokens(tokens)
+	function NormalizeLaTeXExportTokens(tokens, context)
 	{
+		let normalized;
+		let braceBalance = 0;
+		let index;
+
 		if (!tokens || tokens.length === 0)
 			return [];
 
-		return ParseNormalizedSequence(tokens, 0, null, []).tokens;
+		normalized = ParseNormalizedSequence(tokens, 0, null, []).tokens;
+
+		for (index = 0; index < normalized.length; index += 1)
+		{
+			if (normalized[index].kind === TokenKinds.GroupOpen
+				|| normalized[index].kind === TokenKinds.SubOpen
+				|| normalized[index].kind === TokenKinds.SupOpen)
+			{
+				braceBalance += 1;
+			}
+			else if (normalized[index].kind === TokenKinds.GroupClose)
+			{
+				braceBalance -= 1;
+				if (braceBalance < 0)
+				{
+					if (context && context.validation)
+						context.validation.rendererViolations.push("brace-balance:extra-close");
+					braceBalance = 0;
+				}
+			}
+		}
+
+		if (braceBalance > 0 && context && context.validation)
+			context.validation.rendererViolations.push("brace-balance:missing-close");
+
+		return normalized;
 	}
 
 	function IsBoundarySpaceRequired(prevToken, nextToken)
 	{
+		let prevIsCommandLike;
+
 		if (!prevToken || !nextToken)
 			return false;
 
-		if (prevToken.kind === TokenKinds.Command)
+		prevIsCommandLike = prevToken.kind === TokenKinds.Command
+			|| (prevToken.kind === TokenKinds.Raw && /^\\[A-Za-z]+$/.test(prevToken.value));
+
+		if (prevIsCommandLike)
 		{
 			return nextToken.kind === TokenKinds.Identifier
 				|| nextToken.kind === TokenKinds.Number
@@ -232,7 +280,7 @@
 	{
 		let output = "";
 		let prevVisibleToken = null;
-		let normalizedTokens = NormalizeLaTeXExportTokens(tokens);
+		let normalizedTokens = NormalizeLaTeXExportTokens(tokens, context);
 
 		for (let index = 0; index < normalizedTokens.length; index++)
 		{

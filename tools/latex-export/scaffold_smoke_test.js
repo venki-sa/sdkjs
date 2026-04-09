@@ -211,7 +211,36 @@ const fallbackOutput = global.AscMath.ExportToLaTeX({
 	}
 });
 assert.strictEqual(fallbackOutput, "legacy-fallback");
+
+const legacyCommandFallbackValidation = global.AscMath.CreateLaTeXExportValidation();
+const legacyCommandFallbackOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "UnknownLegacyNode"},
+	GetText: function () {
+		return "\\inc\\thicksp x\\funcapply";
+	}
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+	validation: legacyCommandFallbackValidation,
+});
+assert.strictEqual(legacyCommandFallbackOutput, "\\Delta\\;x");
+assert.deepStrictEqual(legacyCommandFallbackValidation.fallbacks, ["UnknownLegacyNode"]);
 assert.ok(global.AscMath.StrictLaTeXReferenceSymbolsMeta.entries > 2000);
+
+const rawCommandBoundaryOutput = global.AscMath.RenderLaTeXExportTokens([
+	token(K.Raw, "\\to"),
+	token(K.Identifier, "x"),
+], global.AscMath.CreateLaTeXExportContext());
+assert.strictEqual(rawCommandBoundaryOutput, "\\to x");
+
+const braceBalanceValidation = global.AscMath.CreateLaTeXExportValidation();
+const braceBalanceOutput = global.AscMath.RenderLaTeXExportTokens([
+	token(K.GroupOpen, "{"),
+	token(K.Identifier, "x"),
+], global.AscMath.CreateLaTeXExportContext({
+	validation: braceBalanceValidation,
+}));
+assert.strictEqual(braceBalanceOutput, "{x");
+assert.deepStrictEqual(braceBalanceValidation.rendererViolations, ["brace-balance:missing-close"]);
 
 const symbolOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.ExportSymbolToLaTeXTokens("℃", global.AscMath.CreateLaTeXExportContext()),

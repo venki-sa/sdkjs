@@ -376,8 +376,33 @@
 	function ExportLeafString(strValue, context)
 	{
 		let result = [];
-		for (const symbol of strValue)
+		let commandPattern = /^\\[A-Za-z]+/;
+		let index = 0;
+		let match;
+		let symbol;
+
+		while (index < strValue.length)
+		{
+			if (strValue[index] === "\\")
+			{
+				match = strValue.slice(index).match(commandPattern);
+				if (match)
+				{
+					result = result.concat(AscMath.ExportLegacyCommandToLaTeXTokens(match[0], context));
+					index += match[0].length;
+					if (AscMath.ShouldSkipFollowingSpaceForLegacyCommand(match[0]))
+					{
+						while (strValue[index] === " ")
+							index += 1;
+					}
+					continue;
+				}
+			}
+
+			symbol = Array.from(strValue.slice(index))[0];
 			result = result.concat(AscMath.ExportSymbolToLaTeXTokens(symbol, context));
+			index += symbol.length;
+		}
 		return result;
 	}
 
