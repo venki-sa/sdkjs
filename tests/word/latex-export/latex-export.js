@@ -37,8 +37,8 @@ $(function () {
 
 	function ResetStrictExportState()
 	{
-		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Legacy);
-		AscMath.SetLaTeXExportFallbackPolicy(AscMath.c_oAscLaTeXExportFallbackPolicy.Legacy);
+		delete AscMath.defaultLaTeXExportMode;
+		delete AscMath.defaultLaTeXExportFallbackPolicy;
 		AscMath.ResetLaTeXExportRegistry();
 	}
 
@@ -53,8 +53,9 @@ $(function () {
 		}
 	});
 
-	QUnit.test("default export mode is legacy", function (assert) {
-		assert.strictEqual(AscMath.GetLaTeXExportMode(), AscMath.c_oAscLaTeXExportMode.Legacy);
+	QUnit.test("default export mode is strict", function (assert) {
+		assert.strictEqual(AscMath.GetLaTeXExportMode(), AscMath.c_oAscLaTeXExportMode.Strict);
+		assert.strictEqual(AscMath.GetLaTeXExportSettings().htmlPreferStrict, true, "strict HTML is preferred by default");
 	});
 
 	QUnit.test("strict export renderer inserts boundary spaces by token kind", function (assert) {

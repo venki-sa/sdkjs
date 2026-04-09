@@ -106,6 +106,14 @@
 		return window.process && window.process.env ? window.process.env : null;
 	}
 
+	function ResolveOptionalBooleanFlag(value)
+	{
+		if (value === undefined || value === null || value === "")
+			return undefined;
+
+		return ParseBooleanFlag(value, false);
+	}
+
 	function GetLaTeXExportEnvironmentConfig()
 	{
 		let globalConfig = GetGlobalLaTeXExportConfig() || {};
@@ -120,7 +128,7 @@
 				cancel: ParseBooleanFlag(globalConfig.latexExportCancel || (globalConfig.packageFeatures && globalConfig.packageFeatures.cancel) || env.OO_LATEX_EXPORT_ENABLE_CANCEL, false),
 			},
 			matrixSpacingHeuristics: ParseBooleanFlag(globalConfig.latexExportMatrixSpacing || globalConfig.matrixSpacingHeuristics || env.OO_LATEX_EXPORT_MATRIX_SPACING, false),
-			htmlPreferStrict: ParseBooleanFlag(globalConfig.latexExportHtmlPreferStrict || globalConfig.htmlPreferStrict || env.OO_LATEX_EXPORT_HTML_PREFER_STRICT, false),
+			htmlPreferStrict: ResolveOptionalBooleanFlag(globalConfig.latexExportHtmlPreferStrict || globalConfig.htmlPreferStrict || env.OO_LATEX_EXPORT_HTML_PREFER_STRICT),
 		};
 	}
 
@@ -138,7 +146,7 @@
 
 	function GetLaTeXExportMode()
 	{
-		return AscMath.defaultLaTeXExportMode || LaTeXExportMode.Legacy;
+		return AscMath.defaultLaTeXExportMode || LaTeXExportMode.Strict;
 	}
 
 	function SetLaTeXExportFallbackPolicy(policy)
@@ -167,7 +175,7 @@
 			fallbackPolicy: options.fallbackPolicy || envConfig.fallbackPolicy || GetLaTeXExportFallbackPolicy(),
 			packageFeatures: options.packageFeatures || envConfig.packageFeatures || {},
 			matrixSpacingHeuristics: options.matrixSpacingHeuristics !== undefined ? !!options.matrixSpacingHeuristics : !!envConfig.matrixSpacingHeuristics,
-			htmlPreferStrict: options.htmlPreferStrict !== undefined ? !!options.htmlPreferStrict : !!envConfig.htmlPreferStrict,
+			htmlPreferStrict: options.htmlPreferStrict !== undefined ? !!options.htmlPreferStrict : (envConfig.htmlPreferStrict !== undefined ? !!envConfig.htmlPreferStrict : true),
 		};
 	}
 

@@ -109,7 +109,8 @@ for (const relPath of files)
 const K = global.AscMath.LaTeXExportTokenKinds;
 const token = global.AscMath.CreateLaTeXExportToken;
 
-assert.strictEqual(global.AscMath.GetLaTeXExportMode(), global.AscMath.c_oAscLaTeXExportMode.Legacy);
+assert.strictEqual(global.AscMath.GetLaTeXExportMode(), global.AscMath.c_oAscLaTeXExportMode.Strict);
+assert.strictEqual(global.AscMath.GetLaTeXExportSettings().htmlPreferStrict, true);
 
 let output = global.AscMath.RenderLaTeXExportTokens([
 	token(K.Command, "\\alpha"),
