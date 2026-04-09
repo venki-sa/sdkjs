@@ -1,0 +1,16 @@
+{
+  "name": "latex-export",
+  "version": "1.0.0",
+  "description": "This directory contains reproducible scripts and manifests for downloading external datasets used to validate the strict LaTeX exporter.",
+  "main": "scaffold_smoke_test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "katex": "^0.16.45",
+    "mathjax-full": "^3.2.2"
+  }
+}

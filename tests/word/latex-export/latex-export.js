@@ -1108,4 +1108,12 @@ $(function () {
 			"b"
 		);
 	});
+
+	QUnit.test("strict OMML alias table keeps only portable mappings", function (assert) {
+		assert.strictEqual(AscMath.OmmlCommandAliases["\\Alpha"], "A", "\\Alpha normalizes to portable Latin A");
+		assert.strictEqual(AscMath.OmmlCommandAliases["\\degree"], "{}^{\\circ}", "\\degree uses portable degree output");
+		assert.strictEqual(AscMath.OmmlCommandAliases["\\overbar"], "\\bar", "\\overbar maps to math accent");
+		assert.strictEqual(AscMath.OmmlCommandAliases["\\bigsqcup"], undefined, "\\bigsqcup remains native LaTeX");
+		assert.strictEqual(AscMath.OmmlCommandAliases["\\clubsuit"], undefined, "\\clubsuit remains native LaTeX");
+	});
 });

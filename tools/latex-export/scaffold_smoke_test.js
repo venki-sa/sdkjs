@@ -15,6 +15,7 @@ const files = [
 	"word/Math/LaTeXExportRenderer.js",
 	"word/Math/LaTeXExportRegistry.js",
 	"word/Math/LaTeXReferenceSymbols.generated.js",
+	"word/Math/OmmlCommandAliases.generated.js",
 	"word/Math/LaTeXExportSymbols.js",
 	"word/Math/LaTeXExportNodes.js",
 ];
@@ -241,6 +242,11 @@ const braceBalanceOutput = global.AscMath.RenderLaTeXExportTokens([
 }));
 assert.strictEqual(braceBalanceOutput, "{x");
 assert.deepStrictEqual(braceBalanceValidation.rendererViolations, ["brace-balance:missing-close"]);
+assert.strictEqual(global.AscMath.OmmlCommandAliases["\\Alpha"], "A");
+assert.strictEqual(global.AscMath.OmmlCommandAliases["\\degree"], "{}^{\\circ}");
+assert.strictEqual(global.AscMath.OmmlCommandAliases["\\overbar"], "\\bar");
+assert.strictEqual(global.AscMath.OmmlCommandAliases["\\bigsqcup"], undefined);
+assert.strictEqual(global.AscMath.OmmlCommandAliases["\\clubsuit"], undefined);
 
 const symbolOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.ExportSymbolToLaTeXTokens("℃", global.AscMath.CreateLaTeXExportContext()),

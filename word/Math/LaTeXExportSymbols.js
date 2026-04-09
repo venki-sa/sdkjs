@@ -41,6 +41,8 @@
 		"\\degc": true,
 		"\\funcapply": true,
 	};
+	const GeneratedOmmlCommandAliases = AscMath.OmmlCommandAliases || {};
+	const GeneratedOmmlCommandRemoveList = AscMath.OmmlCommandRemoveList || {};
 	const GeneratedReferenceSymbols = AscMath.StrictLaTeXReferenceSymbols || {};
 	const GeneratedReferenceDenyList = {
 		"’": true,
@@ -153,6 +155,20 @@
 		return [token(K.Raw, override.value, "legacy-command")];
 	}
 
+	function ExpandGeneratedLegacyAlias(command, alias)
+	{
+		let isSimpleCommand;
+
+		if (!alias)
+			return [];
+
+		isSimpleCommand = /^\\[A-Za-z]+$/.test(alias);
+		if (isSimpleCommand)
+			return [token(K.Command, alias, "legacy-command:" + command)];
+
+		return [token(K.Raw, alias, "legacy-command:" + command)];
+	}
+
 	function ShouldSkipFollowingSpaceForLegacyCommand(command)
 	{
 		return command === "\\funcapply"
@@ -206,6 +222,12 @@
 		override = LegacyCommandOverrides[command];
 		if (override)
 			return ExpandLegacyCommand(override);
+
+		if (GeneratedOmmlCommandRemoveList[command])
+			return [];
+
+		if (GeneratedOmmlCommandAliases[command])
+			return ExpandGeneratedLegacyAlias(command, GeneratedOmmlCommandAliases[command]);
 
 		if (ForbiddenLegacyCommands[command])
 		{
