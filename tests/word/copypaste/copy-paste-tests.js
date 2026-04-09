@@ -2727,6 +2727,32 @@ $(function () {
 		resetStrictExportState();
 	});
 
+	QUnit.test("Copy math html selects strict payload even when defaults are legacy", function (assert) {
+		initDocument();
+		resetStrictExportState();
+
+		let oCopyProcessor = new AscCommon.CopyProcessor(AscTest.Editor);
+		let fakeMath = {
+			Type: para_Math,
+			GetText: function () {
+				return "legacy-value";
+			},
+			GetLaTeXText: function () {
+				return "\\alpha";
+			}
+		};
+
+		oCopyProcessor.CopyRunContent({Content: [fakeMath]}, oCopyProcessor.oRoot, false);
+
+		let copiedHtml = oCopyProcessor.getInnerHtml();
+		assert.ok(copiedHtml.indexOf('data-latex-mode="strict"') !== -1, "strict mode is selected deterministically");
+		assert.ok(copiedHtml.indexOf('data-latex="\\alpha"') !== -1, "selected latex payload uses strict text");
+		assert.ok(copiedHtml.indexOf('data-latex-strict="\\alpha"') !== -1, "strict payload is preserved");
+		assert.ok(copiedHtml.indexOf('data-latex-legacy="legacy-value"') !== -1, "legacy payload remains available for diagnostics");
+
+		resetStrictExportState();
+	});
+
 	QUnit.module("Word Copy/Paste Tests");
 });
 

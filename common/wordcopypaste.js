@@ -742,16 +742,13 @@ CopyProcessor.prototype =
 				}
 			} else if (para_Math === item.Type) {
 				var oMathExport = GetMathHtmlExportData(item);
-				var oDefaultLaTeXSettings = window["AscMath"] && AscMath.GetLaTeXExportSettings ? AscMath.GetLaTeXExportSettings() : null;
-				var bPreferStrictHtml = !!(oDefaultLaTeXSettings
-					&& (oDefaultLaTeXSettings.htmlPreferStrict
-						|| oDefaultLaTeXSettings.mode === AscMath.c_oAscLaTeXExportMode.Strict));
-				var latexText = bPreferStrictHtml && oMathExport.strictText ? oMathExport.strictText : (oMathExport.legacyText || oMathExport.strictText);
+				var bUseStrictHtml = !!oMathExport.strictText;
+				var latexText = bUseStrictHtml ? oMathExport.strictText : oMathExport.legacyText;
 				if (latexText && latexText.trim()) {
 					var oSpan = new CopyElement("span");
 					oSpan.oAttributes["class"] = "math-tex";
 					oSpan.oAttributes["data-math-format"] = "latex";
-					oSpan.oAttributes["data-latex-mode"] = bPreferStrictHtml && oMathExport.strictText ? "strict" : (oMathExport.legacyText ? "legacy" : "strict");
+					oSpan.oAttributes["data-latex-mode"] = bUseStrictHtml ? "strict" : "legacy";
 					oSpan.oAttributes["data-latex"] = CopyPasteCorrectString(latexText);
 					if (oMathExport.legacyText) {
 						oSpan.oAttributes["data-latex-legacy"] = CopyPasteCorrectString(oMathExport.legacyText);
