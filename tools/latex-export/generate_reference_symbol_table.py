@@ -11,6 +11,9 @@ SOURCE_URL = "https://www.w3.org/Math/characters/unicode.xml"
 OUTPUT_PATH = Path(__file__).resolve().parents[2] / "word/Math/LaTeXReferenceSymbols.generated.js"
 LOCAL_SOURCE_PATH = Path(__file__).resolve().parent / "reference-data/unicode.xml"
 
+# unicode.xml is a vendored upstream reference-data snapshot.
+# Keep it in git for reproducible generation; do not review it line-by-line like handwritten source.
+
 
 def fetch_source_xml():
     try:
