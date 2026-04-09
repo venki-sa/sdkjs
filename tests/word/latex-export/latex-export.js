@@ -224,7 +224,8 @@ $(function () {
 				AscMath.ExportSymbolToLaTeXTokens("Å", AscMath.CreateLaTeXExportContext()),
 				AscMath.CreateLaTeXExportContext()
 			),
-			"\\AA"
+			"\\AA",
+			"latin A with ring maps through the generated baseline"
 		);
 
 		assert.strictEqual(
@@ -232,7 +233,8 @@ $(function () {
 				AscMath.ExportSymbolToLaTeXTokens("Å", AscMath.CreateLaTeXExportContext()),
 				AscMath.CreateLaTeXExportContext()
 			),
-			"\\AA"
+			"\\AA",
+			"angstrom sign alternate codepoint maps through the generated baseline"
 		);
 	});
 
@@ -483,10 +485,10 @@ $(function () {
 				mode: AscMath.c_oAscLaTeXExportMode.Strict,
 				validation: validation
 			}),
-			"\\mathop{⇌}\\limits^{x}"
+			"\\mathop{\\rightleftharpoons}\\limits^{x}"
 		);
 		assert.deepEqual(validation.fallbacks, [], "unmapped group character no longer falls back generically");
-		assert.ok(validation.approximatedProperties.includes("CGroupCharacter.rawSymbol"), "rawSymbol approximation is surfaced");
+		assert.notOk(validation.approximatedProperties.includes("CGroupCharacter.rawSymbol"), "mapped group character no longer degrades to a raw symbol");
 	});
 
 	QUnit.test("strict export records approximated OMML properties for unportable node settings", function (assert) {

@@ -62,6 +62,9 @@
 		"（": {kind: "raw", value: "("},
 		"）": {kind: "raw", value: ")"},
 		"·": {kind: "command", value: "\\cdot"},
+		// Deliberately prefer math-semantic mu in strict math output.
+		// The generated W3C baseline maps MICRO SIGN to \mathrm{\mu}, which is more text-flavored.
+		// Context-sensitive unit/text handling should be solved separately rather than changing the global strict default here.
 		"µ": {kind: "command", value: "\\mu"},
 		"ℎ": {kind: "identifier", value: "h"},
 		"≔": {kind: "raw", value: ":="},
@@ -150,6 +153,11 @@
 		return "";
 	}
 
+	function GetSymbolToLaTeXMapping(symbol)
+	{
+		return LookupSymbolMapping(symbol);
+	}
+
 	function ExportSymbolToLaTeXTokens(symbol, context)
 	{
 		if (!symbol)
@@ -209,5 +217,6 @@
 	}
 
 	AscMath.GetLaTeXExportCodePointString = GetCodePointString;
+	AscMath.GetStrictLaTeXSymbolMapping = GetSymbolToLaTeXMapping;
 	AscMath.ExportSymbolToLaTeXTokens = ExportSymbolToLaTeXTokens;
 })(window);

@@ -1721,7 +1721,9 @@
 
 		if (isHorizontalBracket)
 		{
-			mapped = symbol && AscMath.SymbolsToLaTeX ? AscMath.SymbolsToLaTeX[symbol] : "";
+			mapped = symbol && typeof AscMath.GetStrictLaTeXSymbolMapping === "function"
+				? AscMath.GetStrictLaTeXSymbolMapping(symbol)
+				: "";
 		}
 		else switch (codePoint)
 		{
@@ -1744,7 +1746,9 @@
 				mapped = "\\underbracket";
 				break;
 			default:
-				mapped = symbol && AscMath.SymbolsToLaTeX ? AscMath.SymbolsToLaTeX[symbol] : "";
+				mapped = symbol && typeof AscMath.GetStrictLaTeXSymbolMapping === "function"
+					? AscMath.GetStrictLaTeXSymbolMapping(symbol)
+					: "";
 				break;
 		}
 

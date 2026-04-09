@@ -9,6 +9,7 @@ from pathlib import Path
 
 SOURCE_URL = "https://www.w3.org/Math/characters/unicode.xml"
 OUTPUT_PATH = Path(__file__).resolve().parents[2] / "word/Math/LaTeXReferenceSymbols.generated.js"
+LOCAL_SOURCE_PATH = Path(__file__).resolve().parent / "reference-data/unicode.xml"
 
 
 def fetch_source_xml():
@@ -16,9 +17,21 @@ def fetch_source_xml():
         with urllib.request.urlopen(SOURCE_URL, timeout=60) as response:
             return response.read()
     except Exception:
+        print("warning: TLS verification failed when fetching unicode.xml, retrying without certificate verification", file=sys.stderr)
         context = ssl._create_unverified_context()
         with urllib.request.urlopen(SOURCE_URL, timeout=60, context=context) as response:
             return response.read()
+
+
+def read_local_source_xml():
+    return LOCAL_SOURCE_PATH.read_bytes()
+
+
+def refresh_local_source_xml():
+    xml_bytes = fetch_source_xml()
+    LOCAL_SOURCE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    LOCAL_SOURCE_PATH.write_bytes(xml_bytes)
+    return xml_bytes
 
 
 def normalize_latex(value):
@@ -83,7 +96,8 @@ def write_generated_js(symbols):
 
 
 def main():
-    xml_bytes = fetch_source_xml()
+    refresh = "--refresh" in sys.argv[1:]
+    xml_bytes = refresh_local_source_xml() if refresh else read_local_source_xml()
     symbols = collect_reference_symbols(xml_bytes)
     write_generated_js(symbols)
     print(f"generated {len(symbols)} reference symbols -> {OUTPUT_PATH}")

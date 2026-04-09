@@ -982,9 +982,9 @@ const rawGroupCharacterOutput = global.AscMath.ExportToLaTeX({
 	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
 	validation: rawGroupCharacterValidation,
 });
-assert.strictEqual(rawGroupCharacterOutput, "\\mathop{⇌}\\limits^{x}");
+assert.strictEqual(rawGroupCharacterOutput, "\\mathop{\\rightleftharpoons}\\limits^{x}");
 assert.deepStrictEqual(rawGroupCharacterValidation.fallbacks, []);
-assert.deepStrictEqual(rawGroupCharacterValidation.approximatedProperties, ["CGroupCharacter.rawSymbol"]);
+assert.deepStrictEqual(rawGroupCharacterValidation.approximatedProperties, []);
 
 const mathAmpOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CMathAmp"},
