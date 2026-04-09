@@ -114,6 +114,17 @@
 		return ParseBooleanFlag(value, false);
 	}
 
+	function ResolveBooleanSetting(optionValue, envValue, defaultValue)
+	{
+		if (optionValue !== undefined)
+			return !!optionValue;
+
+		if (envValue !== undefined)
+			return !!envValue;
+
+		return !!defaultValue;
+	}
+
 	function GetLaTeXExportEnvironmentConfig()
 	{
 		let globalConfig = GetGlobalLaTeXExportConfig() || {};
@@ -174,8 +185,8 @@
 			mode: options.mode || envConfig.mode || GetLaTeXExportMode(),
 			fallbackPolicy: options.fallbackPolicy || envConfig.fallbackPolicy || GetLaTeXExportFallbackPolicy(),
 			packageFeatures: options.packageFeatures || envConfig.packageFeatures || {},
-			matrixSpacingHeuristics: options.matrixSpacingHeuristics !== undefined ? !!options.matrixSpacingHeuristics : !!envConfig.matrixSpacingHeuristics,
-			htmlPreferStrict: options.htmlPreferStrict !== undefined ? !!options.htmlPreferStrict : (envConfig.htmlPreferStrict !== undefined ? !!envConfig.htmlPreferStrict : true),
+			matrixSpacingHeuristics: ResolveBooleanSetting(options.matrixSpacingHeuristics, envConfig.matrixSpacingHeuristics, false),
+			htmlPreferStrict: ResolveBooleanSetting(options.htmlPreferStrict, envConfig.htmlPreferStrict, true),
 		};
 	}
 
