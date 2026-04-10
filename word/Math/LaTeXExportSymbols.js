@@ -74,6 +74,7 @@
 		"Χ": {kind: "identifier", value: "X"},
 		"ℎ": {kind: "identifier", value: "h"},
 		"≔": {kind: "raw", value: ":="},
+		"，": {kind: "raw", value: ","},
 		"{": {kind: "raw", value: "\\{"},
 		"}": {kind: "raw", value: "\\}"},
 		"#": {kind: "raw", value: "\\#"},
@@ -82,6 +83,7 @@
 		"_": {kind: "raw", value: "\\_"},
 		"−": {kind: "raw", value: "-"},
 		"–": {kind: "raw", value: "-"},
+		"∕": {kind: "raw", value: "/"},
 	};
 	const InvalidPlaceholderSymbols = {
 		"⬚": true,
@@ -155,18 +157,89 @@
 		return [token(K.Raw, override.value, "legacy-command")];
 	}
 
+	function ExportAliasSymbol(symbol, source)
+	{
+		if (/^[A-Za-z]$/.test(symbol))
+			return token(K.Identifier, symbol, source);
+
+		if (/^[0-9]$/.test(symbol))
+			return token(K.Number, symbol, source);
+
+		if (/^[+\-=*/(),.;:<>[\]|!@~?'"]$/.test(symbol))
+			return token(K.Raw, symbol, source);
+
+		return token(K.Raw, symbol, source);
+	}
+
+	function TokenizeGeneratedAlias(alias, source)
+	{
+		let result = [];
+		let index = 0;
+		let commandMatch;
+		let symbol;
+
+		while (index < alias.length)
+		{
+			if (alias[index] === "\\")
+			{
+				commandMatch = alias.slice(index).match(/^\\[A-Za-z]+/);
+				if (commandMatch)
+				{
+					result.push(token(K.Command, commandMatch[0], source));
+					index += commandMatch[0].length;
+					continue;
+				}
+
+				if (alias[index + 1])
+				{
+					result.push(token(K.Raw, alias.slice(index, index + 2), source));
+					index += 2;
+					continue;
+				}
+			}
+
+			if (alias[index] === "{")
+			{
+				result.push(token(K.GroupOpen, "{", source));
+				index += 1;
+				continue;
+			}
+
+			if (alias[index] === "}")
+			{
+				result.push(token(K.GroupClose, "}", source));
+				index += 1;
+				continue;
+			}
+
+			if (alias[index] === "_" && alias[index + 1] === "{")
+			{
+				result.push(token(K.SubOpen, "_{", source));
+				index += 2;
+				continue;
+			}
+
+			if (alias[index] === "^" && alias[index + 1] === "{")
+			{
+				result.push(token(K.SupOpen, "^{", source));
+				index += 2;
+				continue;
+			}
+
+			symbol = Array.from(alias.slice(index))[0];
+			result.push(ExportAliasSymbol(symbol, source));
+			index += symbol.length;
+		}
+
+		return result;
+	}
+
 	function ExpandGeneratedLegacyAlias(command, alias)
 	{
-		let isSimpleCommand;
-
 		if (!alias)
 			return [];
 
-		isSimpleCommand = /^\\[A-Za-z]+$/.test(alias);
-		if (isSimpleCommand)
-			return [token(K.Command, alias, "legacy-command:" + command)];
-
-		return [token(K.Raw, alias, "legacy-command:" + command)];
+		return TokenizeGeneratedAlias(alias, "legacy-command:" + command);
 	}
 
 	function ShouldSkipFollowingSpaceForLegacyCommand(command)
@@ -286,7 +359,7 @@
 			if (/^\\[A-Za-z]+$/.test(mapped))
 				return [token(K.Command, mapped, "symbol:" + symbol)];
 
-			return [token(K.Raw, mapped, "symbol:" + symbol)];
+			return TokenizeGeneratedAlias(mapped, "symbol:" + symbol);
 		}
 
 		if (/^[+\-=*/(),.;:<>[\]|!@~?'"]$/.test(symbol))

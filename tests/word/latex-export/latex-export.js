@@ -119,6 +119,19 @@ $(function () {
 			"\\Delta\\;x"
 		);
 		assert.deepEqual(validation.fallbacks, ["UnknownLegacyNode"], "legacy node still records fallback identity");
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "UnknownGeneratedAliasNode"},
+				GetText: function () {
+					return "\\scriptL(\\Theta)\\doubleR";
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"\\mathscr{L}(\\Theta)\\mathbb{R}",
+			"compound generated aliases are tokenized instead of emitted as raw commands"
+		);
 	});
 
 	QUnit.test("strict symbol overrides remove OMML-only aliases", function (assert) {
@@ -252,6 +265,30 @@ $(function () {
 				AscMath.CreateLaTeXExportContext()
 			),
 			"X"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("ℝ", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"\\mathbb{R}"
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("，", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			","
+		);
+
+		assert.strictEqual(
+			AscMath.RenderLaTeXExportTokens(
+				AscMath.ExportSymbolToLaTeXTokens("∕", AscMath.CreateLaTeXExportContext()),
+				AscMath.CreateLaTeXExportContext()
+			),
+			"/"
 		);
 
 		assert.strictEqual(
@@ -503,6 +540,59 @@ $(function () {
 		assert.deepEqual(validation.rendererViolations, ["empty-script-iterator:CDegreeSubSup.lower"], "empty placeholder lower iterator is omitted");
 	});
 
+	QUnit.test("strict export normalizes prime-only degree iterators", function (assert) {
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+
+		function textNode(value)
+		{
+			return {
+				constructor: {name: "CMathText"},
+				value: value
+			};
+		}
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CDegree"},
+				Pr: {type: 1},
+				getBase: function () {
+					return textNode("i".codePointAt(0));
+				},
+				getIterator: function () {
+					return textNode("'".codePointAt(0));
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"i'"
+		);
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CDegree"},
+				Pr: {type: 0},
+				getBase: function () {
+					return textNode("C".codePointAt(0));
+				},
+				getIterator: function () {
+					return {
+						constructor: {name: "CDegree"},
+						Pr: {type: 1},
+						getBase: function () {
+							return textNode("i".codePointAt(0));
+						},
+						getIterator: function () {
+							return textNode("'".codePointAt(0));
+						}
+					};
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"C_{i'}"
+		);
+	});
+
 	QUnit.test("strict export lowers unmapped group characters without generic fallback", function (assert) {
 		let validation = AscMath.CreateLaTeXExportValidation();
 
@@ -532,6 +622,32 @@ $(function () {
 		);
 		assert.deepEqual(validation.fallbacks, [], "unmapped group character no longer falls back generically");
 		assert.notOk(validation.approximatedProperties.includes("CGroupCharacter.rawSymbol"), "mapped group character no longer degrades to a raw symbol");
+	});
+
+	QUnit.test("strict export normalizes fullwidth delimiter glyphs", function (assert) {
+		AscMath.SetLaTeXExportMode(AscMath.c_oAscLaTeXExportMode.Strict);
+
+		assert.strictEqual(
+			AscMath.ExportToLaTeX({
+				constructor: {name: "CDelimiter"},
+				Pr: {
+					begChr: "（".charCodeAt(0),
+					endChr: "）".charCodeAt(0)
+				},
+				begOper: {},
+				endOper: {},
+				Content: [{
+					constructor: {name: "CMathText"},
+					value: "x".codePointAt(0)
+				}],
+				getColumnsCount: function () {
+					return 1;
+				}
+			}, {
+				mode: AscMath.c_oAscLaTeXExportMode.Strict
+			}),
+			"\\left(x\\right)"
+		);
 	});
 
 	QUnit.test("strict renderer inserts boundary spaces after raw command-like tokens", function (assert) {

@@ -227,6 +227,16 @@ assert.strictEqual(legacyCommandFallbackOutput, "\\Delta\\;x");
 assert.deepStrictEqual(legacyCommandFallbackValidation.fallbacks, ["UnknownLegacyNode"]);
 assert.ok(global.AscMath.StrictLaTeXReferenceSymbolsMeta.entries > 2000);
 
+const generatedAliasFallbackOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "UnknownGeneratedAliasNode"},
+	GetText: function () {
+		return "\\scriptL(\\Theta)\\doubleR";
+	}
+}, {
+	mode: global.AscMath.c_oAscLaTeXExportMode.Strict,
+});
+assert.strictEqual(generatedAliasFallbackOutput, "\\mathscr{L}(\\Theta)\\mathbb{R}");
+
 const rawCommandBoundaryOutput = global.AscMath.RenderLaTeXExportTokens([
 	token(K.Raw, "\\to"),
 	token(K.Identifier, "x"),
@@ -343,6 +353,24 @@ const capitalChiOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.CreateLaTeXExportContext()
 );
 assert.strictEqual(capitalChiOutput, "X");
+
+const doubleStruckRSignOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("ℝ", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(doubleStruckRSignOutput, "\\mathbb{R}");
+
+const chineseCommaOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("，", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(chineseCommaOutput, ",");
+
+const divisionSlashOutput = global.AscMath.RenderLaTeXExportTokens(
+	global.AscMath.ExportSymbolToLaTeXTokens("∕", global.AscMath.CreateLaTeXExportContext()),
+	global.AscMath.CreateLaTeXExportContext()
+);
+assert.strictEqual(divisionSlashOutput, "/");
 
 const reversibleArrowOutput = global.AscMath.RenderLaTeXExportTokens(
 	global.AscMath.ExportSymbolToLaTeXTokens("⇌", global.AscMath.CreateLaTeXExportContext()),
@@ -537,6 +565,32 @@ const degreeOutput = global.AscMath.ExportToLaTeX({
 }, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
 assert.strictEqual(degreeOutput, "x^{2}");
 
+const primeDegreeOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegree"},
+	Pr: {type: 1},
+	getBase() { return textNode("i".codePointAt(0)); },
+	getIterator() { return textNode("'".codePointAt(0)); },
+	GetText() { return "legacy-prime-degree"; }
+}, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
+assert.strictEqual(primeDegreeOutput, "i'");
+
+const nestedPrimeSubscriptOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDegree"},
+	Pr: {type: 0},
+	getBase() { return textNode("C".codePointAt(0)); },
+	getIterator() {
+		return {
+			constructor: {name: "CDegree"},
+			Pr: {type: 1},
+			getBase() { return textNode("i".codePointAt(0)); },
+			getIterator() { return textNode("'".codePointAt(0)); },
+			GetText() { return "legacy-inner-prime-degree"; }
+		};
+	},
+	GetText() { return "legacy-nested-prime-subscript"; }
+}, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
+assert.strictEqual(nestedPrimeSubscriptOutput, "C_{i'}");
+
 const placeholderDegreeValidation = global.AscMath.CreateLaTeXExportValidation();
 const placeholderDegreeOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CDegree"},
@@ -577,6 +631,20 @@ const placeholderDegreeSubSupOutput = global.AscMath.ExportToLaTeX({
 });
 assert.strictEqual(placeholderDegreeSubSupOutput, "f^{2}");
 assert.deepStrictEqual(placeholderDegreeSubSupValidation.rendererViolations, ["empty-script-iterator:CDegreeSubSup.lower"]);
+
+const fullwidthDelimiterOutput = global.AscMath.ExportToLaTeX({
+	constructor: {name: "CDelimiter"},
+	Pr: {
+		begChr: "（".charCodeAt(0),
+		endChr: "）".charCodeAt(0)
+	},
+	begOper: {},
+	endOper: {},
+	Content: [textNode("x".codePointAt(0))],
+	getColumnsCount() { return 1; },
+	GetText() { return "legacy-fullwidth-delimiter"; }
+}, {mode: global.AscMath.c_oAscLaTeXExportMode.Strict});
+assert.strictEqual(fullwidthDelimiterOutput, "\\left(x\\right)");
 
 const limitOutput = global.AscMath.ExportToLaTeX({
 	constructor: {name: "CLimit"},

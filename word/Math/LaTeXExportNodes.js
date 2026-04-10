@@ -917,6 +917,60 @@
 		return AppendScriptTokens(result, kind, iterator);
 	}
 
+	function GetPrimeScriptText(tokenValue)
+	{
+		switch (tokenValue)
+		{
+			case "'":
+			case "′":
+				return "'";
+			case "''":
+			case "″":
+				return "''";
+			case "'''":
+			case "‴":
+				return "'''";
+			case "\\prime":
+				return "'";
+			case "\\pprime":
+				return "''";
+			case "\\ppprime":
+				return "'''";
+			case "\\pppprime":
+				return "''''";
+			default:
+				return "";
+		}
+	}
+
+	function ExtractPrimeScriptTokens(iterator)
+	{
+		let result = [];
+		let primeText;
+		let currentToken;
+		let index;
+		let charIndex;
+
+		if (!iterator || iterator.length === 0)
+			return [];
+
+		for (index = 0; index < iterator.length; index += 1)
+		{
+			currentToken = iterator[index];
+			if (!currentToken || currentToken.kind === K.Invisible || currentToken.kind === K.Space)
+				continue;
+
+			primeText = GetPrimeScriptText(currentToken.value);
+			if (!primeText)
+				return [];
+
+			for (charIndex = 0; charIndex < primeText.length; charIndex += 1)
+				result.push(token(K.Raw, "'", currentToken.source));
+		}
+
+		return result;
+	}
+
 	function ExportFraction(node, context)
 	{
 		let numerator = AscMath.ExportNodeToLaTeXTokens(node.getNumerator(), context);
@@ -951,6 +1005,10 @@
 		let base = AscMath.ExportNodeToLaTeXTokens(node.getBase(), context);
 		let iterator = AscMath.ExportNodeToLaTeXTokens(node.getIterator(), context);
 		let isSup = node.Pr.type === 1;
+		let primeScriptTokens = isSup ? ExtractPrimeScriptTokens(iterator) : [];
+
+		if (primeScriptTokens.length > 0)
+			return base.concat(primeScriptTokens);
 
 		return AppendVisibleScriptTokens(base, isSup ? "sup" : "sub", node.getIterator(), iterator, context, "empty-script-iterator:CDegree");
 	}
@@ -1005,6 +1063,10 @@
 
 	function NormalizeDelimiterSymbol(symbol, side)
 	{
+		if (symbol === "（")
+			return "(";
+		if (symbol === "）")
+			return ")";
 		if (symbol === "{")
 			return "\\{";
 		if (symbol === "}")
